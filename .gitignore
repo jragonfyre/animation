@@ -1,0 +1,5 @@
+.stack-work/
+Animation.cabal
+*~
+sandbox/
+*.swp

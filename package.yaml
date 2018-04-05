@@ -1,0 +1,94 @@
+name:                Animation
+version:             0.1.0.0
+github:              "jragonfyre/Animation"
+license:             BSD3
+author:              "Jason Schuchardt"
+maintainer:          "jargon.schuchardt@gmail.com"
+copyright:           "Jason Schuchardt"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on Github at <https://github.com/jragonfyre/Animation#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- containers
+- mtl
+- array
+- hip >= 1.5
+- JuicyPixels
+- colour
+- netpbm
+- vector
+- filepath
+- repa
+- data-default
+
+default-extensions:
+- LambdaCase
+- OverloadedStrings
+- GADTSyntax
+- GADTs
+- RankNTypes
+- ScopedTypeVariables
+- DeriveGeneric
+- TupleSections
+- BangPatterns
+- MultiParamTypeClasses
+- FlexibleInstances
+- FlexibleContexts
+- DisambiguateRecordFields
+- NamedFieldPuns
+- RecordWildCards
+- TypeFamilies
+- TypeOperators
+- FunctionalDependencies
+- MonadComprehensions
+- BinaryLiterals
+- RecursiveDo
+- ParallelListComp
+- PartialTypeSignatures
+- PatternSynonyms
+- EmptyCase
+- InstanceSigs
+- KindSignatures
+- DeriveFunctor
+- DeriveFoldable
+- DeriveTraversable
+- ExplicitNamespaces
+- StandaloneDeriving
+#- OverloadedLists
+
+library:
+  source-dirs: src
+
+executables:
+  Animation-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - Animation
+
+tests:
+  Animation-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - Animation
