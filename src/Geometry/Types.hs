@@ -9,6 +9,7 @@ module Geometry.Types where
   --( 
   --) where
 
+import Data.Array (Array)
 
 
 -- point

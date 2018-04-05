@@ -5,42 +5,23 @@
 -- Distributed under terms of the MIT license.
 --
 
-module Geometry.Curve where
+module Geometry.Curve 
+  ( module Geometry.Curve
+  , module Geometry.Curve.Class
+  ) where
+
+import Data.Array
 
 import Geometry.Types
+import Geometry.Constructors
+import Geometry.Common
 
+import Geometry.Curve.Class
+import Geometry.Region.Class
 
--- a parametrizable curve
--- min implementation is param
-class Curve c where
-  type CurveData c :: *
-  type CurveData c = Double
-  param :: c -> Double -> Point 
-  -- more general curves can find better ways to sample [0,1] to provide a better approximation of the curve
-  -- e.g. more samples when there is greater curvature, or one sample per fixed length of curve, arc length
-  -- parametrization would be ideal.
-  -- also
-  polyLine :: CurveData c -> c -> PolyLine
-  --polyLine = approxPolyLine
-  distance :: CurveData c -> c -> Point -> Double
-  distance = approxDistance
-  winding :: CurveData c -> c -> Point -> Double
-  winding = approxWinding
+import Geometry.Affine
+import Geometry.PolyLine
 
-approxPolyLine :: (Curve c) => Double -> c -> PolyLine
-approxPolyLine interval curve =
-  let
-    n = ceiling (1/interval) :: Integer
-    delta = 1/ (fromIntegral n) :: Double
-    f = \x -> param curve $ (fromIntegral x) * delta
-  in
-    makePolyLine $ map f [0..n]
-
-approxDistance :: (Curve c) => CurveData c -> c -> Point -> Double
-approxDistance int curve = polyLineDistance (polyLine int curve)
-
-approxWinding :: (Curve c) => CurveData c -> c -> Point -> Double
-approxWinding int curve = polyLineWinding (polyLine int curve)
 
 instance Curve Segment where
   type CurveData Segment = ()
@@ -68,12 +49,6 @@ instance Curve Circle where
       --0
 
 
-polyLineDistance :: PolyLine -> Point -> Double
-polyLineDistance pl pt = segmentFold1 (flip segmentDistance pt) min pl
-
-polyLineWinding :: PolyLine -> Point -> Double
-polyLineWinding pl pt = segmentFold (flip segmentWinding pt) (+) 0 pl
-
 instance Curve PolyLine where
   type CurveData PolyLine = ()
   param (PolyLine arr) t = 
@@ -94,7 +69,7 @@ instance Curve Polygon where
   polyLine () Polygon{..} = polyBdry
   distance () Polygon{..} pt = polyLineDistance polyBdry pt
   -- TODO: update this
-  winding () Polygon{..} pt = polyLineWinding polyBdry pt
+  winding () poly pt = fromIntegral $ polygonWindingNumber poly pt --polyLineWinding polyBdry pt
 
 
 polygonWindingNumber :: Polygon -> Point -> Integer
@@ -108,18 +83,6 @@ polygonWindingNumber Polygon{..} pt = case polyRegion of
   Nothing ->
     approxWindingNumber () polyBdry pt
 
-class Curve c => ClosedCurve c where
-  insideCC :: CurveData c -> c -> Point -> Bool -- don't need to define if you define exactWindingNumber, unless
-  -- you have a more efficient variant
-  insideCC = approxInside
-  windingNumber :: CurveData c -> c -> Point -> Integer
-  windingNumber = approxWindingNumber
-
-approxWindingNumber :: Curve c => CurveData c -> c -> Point -> Integer
-approxWindingNumber val curve pt = round $ winding val curve pt
-
-approxInside :: (ClosedCurve c) => CurveData c -> c -> Point -> Bool
-approxInside val curve pt = (windingNumber val curve pt) /= 0
 
 instance ClosedCurve Circle where
   windingNumber _ = \circ pt ->

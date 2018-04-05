@@ -7,7 +7,11 @@
 
 module Geometry.Constructors where
 
+import Data.Array
+
 import Geometry.Types
+import Geometry.Common
+import Geometry.Affine
 
 makePoint :: Double -> Double -> Point
 makePoint = (,)

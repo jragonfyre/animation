@@ -6,7 +6,7 @@
 --
 
 -- 2D geometry module for use with animation
-module Geometry where
+module Geometry 
   ( module Geometry
   , module Geometry.Types
   , module Geometry.Constructors

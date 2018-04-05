@@ -5,15 +5,14 @@
 -- Distributed under terms of the MIT license.
 --
 
-module Geometry.Region where
+module Geometry.Region
+  ( module Geometry.Region
+  , module Geometry.Region.Class
+  ) where
 
 import Geometry.Curve
+import Geometry.Region.Class
 
-class Region r where
-  type RegionData r :: *
-  type RegionData r = Double
-  inside :: RegionData r -> r -> Point -> Bool
-  distanceBdry :: Maybe (RegionData r -> r -> Point -> Double)
   
 
 instance Region Polygon where

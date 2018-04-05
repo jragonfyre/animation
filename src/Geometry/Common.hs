@@ -5,8 +5,9 @@
 -- Distributed under terms of the MIT license.
 --
 
-module Common where
+module Geometry.Common where
 
+import Data.Array
 import Geometry.Types
 
 segmentFold :: (Segment -> a) -> (a -> b -> b) -> b -> PolyLine -> b

@@ -7,6 +7,7 @@
 
 module Geometry.Affine where
 
+import Geometry.Types
 
 infixl 6 +.
 (+.) :: Vector -> Vector -> Vector
