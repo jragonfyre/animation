@@ -10,25 +10,14 @@ module Geometry.Region
   , module Geometry.Region.Class
   ) where
 
+import Geometry.Types
+
 import Geometry.Curve
 import Geometry.Region.Class
 
+import Geometry.Affine
+
   
-
-instance Region Polygon where
-  type RegionData Polygon = ()
-  inside = insideCC
-  distanceBdry = Just distance
-
-instance Region Circle where
-  type RegionData Circle = ()
-  inside () = insideCC 0.0
-  distanceBdry = Just $ \() -> distance 0.0 
-
-instance Region ConvexPolytope where
-  type RegionData ConvexPolytope = ()
-  inside _ (ConvexPolytope hps) pt = and $ map (flip (inside ()) pt) hps
-  distanceBdry = Nothing
 
 
 instance Region ImplicitRegion where
@@ -61,7 +50,4 @@ distanceOut val reg pt =
     distanceBdry >>= (\f -> return $ f val reg pt)
   else
     Just 0
-instance Region HalfPlane where
-  type RegionData HalfPlane = ()
-  inside _ (HalfPlane n d) pt = n `dot` pt >= d
-  distanceBdry = Just $ \_ (HalfPlane n d) pt -> abs ((n `dot` pt)-d)
+

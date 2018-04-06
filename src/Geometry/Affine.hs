@@ -105,4 +105,3 @@ segmentWinding (start,end) pt =
   in
     theta/(2* pi)
 
-

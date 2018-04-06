@@ -11,9 +11,14 @@ module Geometry
   , module Geometry.Types
   , module Geometry.Constructors
   , module Geometry.Common
-  , module Geometry.Affine
   , module Geometry.Curve
+  , module Geometry.Curve.Class
   , module Geometry.Region
+  , module Geometry.Region.Class
+  , module Geometry.Affine
+  , module Geometry.Affine.Instances
+  , module Geometry.PolyLine
+  , module Geometry.PolyLine.Instances
   ) where
 
 import Data.Array 
@@ -22,11 +27,15 @@ import Geometry.Types
 import Geometry.Constructors
 import Geometry.Common
 
-import Geometry.Affine
 import Geometry.Curve
+import Geometry.Curve.Class
 import Geometry.Region
+import Geometry.Region.Class
 
-
+import Geometry.Affine
+import Geometry.Affine.Instances
+import Geometry.PolyLine
+import Geometry.PolyLine.Instances
 
 
 

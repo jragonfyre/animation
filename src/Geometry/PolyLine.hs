@@ -20,3 +20,4 @@ polyLineWinding pl pt = segmentFold (flip segmentWinding pt) (+) 0 pl
 
 
 
+
