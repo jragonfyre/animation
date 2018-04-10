@@ -47,6 +47,11 @@ antialiasPixelIntensity center pixelWidth pixelHeight numSamplesV numSamplesH va
       $ testpts
 
 
+bezier1 :: Bezier2
+bezier1 = makeBezier2 (-0.7,-0.2) (1,1) (0.7,-0.8)
+
+--regionBezier1 :: ImplicitRegion
+--regionBezier1 = ImplicitRegion $ 
 
 --mid = (halfdimen,halfdimen)
 

@@ -19,6 +19,7 @@ module Geometry
   , module Geometry.Affine.Instances
   , module Geometry.PolyLine
   , module Geometry.PolyLine.Instances
+  , module Geometry.Bezier
   ) where
 
 import Data.Array 
@@ -36,6 +37,8 @@ import Geometry.Affine
 import Geometry.Affine.Instances
 import Geometry.PolyLine
 import Geometry.PolyLine.Instances
+
+import Geometry.Bezier
 
 
 
