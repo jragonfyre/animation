@@ -15,6 +15,38 @@ import Geometry
 data LRGBA = LRGBA Double Double Double Double
   deriving (Show, Read, Eq, Ord)
 
+icPix :: (Region r) => Point -> Double -> Integer -> RegionData r -> r -> Double
+icPix c w s val r = implicitCurvePix c w w s s val r
+
+implicitCurvePix :: (Region r) => 
+  Point -> Double -> Double -> Integer -> Integer -> RegionData r -> r -> Double
+implicitCurvePix c w h nv nh v r = 
+  let 
+    t = antialiasPixelIntensity c w h nv nh v r
+  in
+    (-4)*t*(t-1)
+
+aaPix :: (Region r) => Point -> Double -> Integer -> RegionData r -> r -> Double
+aaPix c w s val r = antialiasPixelIntensity c w w s s val r
+
+antialiasPixelIntensity :: (Region r) =>
+  Point -> Double -> Double -> Integer -> Integer -> RegionData r -> r -> Double
+antialiasPixelIntensity center pixelWidth pixelHeight numSamplesV numSamplesH val region =
+  let
+    (sx,sy) = center -. (1/2) *. (pixelWidth, pixelHeight)
+    nv = numSamplesV-1
+    nh = numSamplesH-1
+    dx = pixelWidth/fromIntegral nh
+    dy = pixelWidth/fromIntegral nv
+    testpts = [ (sx+(fromIntegral i)*dx,sy+(fromIntegral j)*dy) | i <- [0..nh], j <- [0..nv]]
+  in
+    (/(fromIntegral $ numSamplesV*numSamplesH)) 
+      . fromIntegral 
+      . length 
+      . filter (inside val region)
+      $ testpts
+
+
 -- takes postmultipliedAlpha
 makeLRGBA :: Double -> Double -> Double -> Double -> LRGBA
 makeLRGBA r g b a = LRGBA (r*a) (g*a) (b*a) a
@@ -28,7 +60,7 @@ newtype SolidFill = SolidFill LRGBA
 
 instance Fill SolidFill where
   type FillData SolidFill = ()
-  colorPt () (SolidFill c) _ = c
+  colorPt () (SolidFill c) _ = Just c
 
 data FilledRegion r f where
   FilledRegion :: (Region r, Fill f) => r -> f -> FilledRegion r f
@@ -46,9 +78,33 @@ instance Drawable (FilledRegion r f) where
         Nothing
 
 data SolidCurve r c f where
-  SolidCurve :: (Region r, Curve c, Fill f) => r -> c -> f -> SolidCurve r c f
+  SolidCurve :: (Region r, ImplicitCurve c, Fill f) => r -> c -> f -> SolidCurve r c f
 
-instance Drawable
+instance Drawable (SolidCurve r c f) where
+  type DrawData (SolidCurve r c f) = (RegionData r, FillData f, Double, Integer)
+  getPixel (rdat, fdat, pscale, numSamples) (SolidCurve r c f) pw ph pllc = 
+    let
+      (pixx,pixy)=pllc
+      pixc = (pixx+pw/2,pixy+ph/2)
+    in
+      if inside rdat r pixc
+      then
+        do
+          (LRGBA r g b a) <- colorPt fdat f pixc
+          let s = implicitCurvePix 
+                  pixc
+                  (pscale*pw)
+                  (pscale*ph)
+                  numSamples
+                  numSamples
+                  ()
+                  (ImplicitRegion ((>=0) . implicit c))
+          return $ LRGBA (r*s) (g*s) (b*s) (a*s)
+      else
+        Nothing
+
+      
+
 
 data DrawBox :: * where
   DrawBox :: (Drawable d) => DrawData d -> d -> DrawBox

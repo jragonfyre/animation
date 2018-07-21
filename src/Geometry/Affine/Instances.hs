@@ -23,6 +23,12 @@ instance Curve Segment where
   distance () = segmentDistance
   winding () = segmentWinding
 
+instance ImplicitCurve Segment where
+  implicit segt pt = 
+    let
+      (n,d)=segmentToLine segt
+    in
+      (n `dot` pt) - d
 
 instance Curve Circle where
   --type CurveData Circle = ()
@@ -40,6 +46,9 @@ instance Curve Circle where
       --1
     --else 
       --0
+
+instance ImplicitCurve Circle where
+  implicit circ (x,y) = x^2+y^2 - (radius circ)
 
 instance ClosedCurve Circle where
   windingNumber _ = \circ pt ->

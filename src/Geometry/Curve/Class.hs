@@ -52,6 +52,9 @@ class Curve c => ClosedCurve c where
   windingNumber :: CurveData c -> c -> Point -> Integer
   windingNumber = approxWindingNumber
 
+class Curve c => ImplicitCurve c where
+  implicit :: c -> Point -> Double
+
 approxWindingNumber :: Curve c => CurveData c -> c -> Point -> Integer
 approxWindingNumber val curve pt = round $ winding val curve pt
 

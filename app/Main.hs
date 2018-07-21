@@ -1,6 +1,7 @@
 module Main where
 
 import Geometry
+import Model
 import qualified Graphics.Image as I
 import Graphics.Image (RPU,RGB,Image)
 import Control.Monad (void)
@@ -15,6 +16,7 @@ regularPolygon n s = flip makePolygon True . map (\i ->
 
 heptagon = regularPolygon 7 1.0
 
+{-
 icPix :: (Region r) => Point -> Double -> Integer -> RegionData r -> r -> Double
 icPix c w s val r = implicitCurvePix c w w s s val r
 
@@ -46,6 +48,7 @@ antialiasPixelIntensity center pixelWidth pixelHeight numSamplesV numSamplesH va
       . filter (inside val region)
       $ testpts
 
+-}
 
 bezier1 :: Bezier2
 bezier1 = makeBezier2 (-0.7,-0.2) (1,1) (0.7,-0.8)
@@ -72,6 +75,9 @@ positive f pt = f pt > 0
 
 regionFunc :: Double -> ImplicitRegion
 regionFunc tol = ImplicitRegion $ withinTol tol func
+
+--drawableImage :: (Drawable d) => DrawData d -> d -> Int -> Double -> Image RPU RGB Double
+--drawableImage 
 
 curveImage :: Double -> (Double -> Point -> Double) -> Int -> Double -> Double -> Double -> Double -> Image RPU RGB Double
 curveImage tol f dimen regionSize pixScale t r = 

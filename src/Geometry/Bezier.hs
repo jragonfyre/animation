@@ -60,6 +60,8 @@ instance Curve Bezier2 where
   --winding :: CurveData c -> c -> Point -> Double
   winding = approxWinding
 
+instance ImplicitCurve Bezier2 where
+  implicit = implicitization2
 
 data Bezier3 = Bezier3 
   { start3 :: Point
@@ -69,6 +71,20 @@ data Bezier3 = Bezier3
   , parametrization3 :: Double -> Point
   , implicitization3 :: Point -> Double
   }
+
+instance Curve Bezier3 where
+  type CurveData Bezier3 = Double
+  param = parametrization3
+  --polyLine :: CurveData c -> c -> PolyLine
+  polyLine = approxPolyLine
+  --distance :: CurveData c -> c -> Point -> Double
+  distance = approxDistance
+  --winding :: CurveData c -> c -> Point -> Double
+  winding = approxWinding
+
+instance ImplicitCurve Bezier3 where
+  implicit = implicitization3
+
 
 --data Bezier = Bezier 
 
