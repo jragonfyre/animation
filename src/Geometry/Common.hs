@@ -10,6 +10,7 @@ module Geometry.Common where
 import Data.Array
 import Geometry.Types
 
+{-
 segmentFold :: (Segment -> a) -> (a -> b -> b) -> b -> PolyLine -> b
 segmentFold f op init (PolyLine arr) = 
   let
@@ -27,4 +28,5 @@ segmentFold1 f op (PolyLine arr) =
     segvals = map (\(ix1,ix2) -> f (arr ! ix1, arr! ix2)) segixs
   in
     foldr1 op segvals
+-}
 

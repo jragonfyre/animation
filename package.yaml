@@ -32,6 +32,7 @@ dependencies:
 - filepath
 - repa
 - data-default
+- lens
 
 default-extensions:
 - LambdaCase
@@ -66,6 +67,8 @@ default-extensions:
 - DeriveTraversable
 - ExplicitNamespaces
 - StandaloneDeriving
+- DataKinds
+- TemplateHaskell
 #- OverloadedLists
 
 library:

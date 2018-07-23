@@ -5,13 +5,15 @@ import Model
 import qualified Graphics.Image as I
 import Graphics.Image (RPU,RGB,Image)
 import Control.Monad (void)
+import Control.Lens ((^.))
+import Control.Lens.Iso (under,from)
 
 regularPolygon :: Integer -> Double -> Polygon
-regularPolygon n s = flip makePolygon True . map (\i -> 
+regularPolygon n s = flip buildPolygon True . map (\i -> 
   let
     theta = 2*pi *(fromIntegral i)/(fromIntegral n)
   in
-    (s * cos theta, s* sin theta))
+    ptFromPair (s * cos theta, s* sin theta))
   $ [0..(n-1)]
 
 heptagon = regularPolygon 7 1.0
@@ -51,21 +53,26 @@ antialiasPixelIntensity center pixelWidth pixelHeight numSamplesV numSamplesH va
 -}
 
 bezier1 :: Bezier2
-bezier1 = makeBezier2 (-0.7,-0.2) (1,1) (0.7,-0.8)
+bezier1 = makeBezier2 (ptFromPair (-0.7,-0.2)) (ptFromPair (1,1)) (ptFromPair (0.7,-0.8))
 
 --regionBezier1 :: ImplicitRegion
 --regionBezier1 = ImplicitRegion $ 
 
 --mid = (halfdimen,halfdimen)
 
-toPoint :: Double -> Double -> (Int,Int) -> (Double,Double)
-toPoint regionSize hdimen (i,j) = (regionSize/2/hdimen) *. (fromIntegral j-hdimen, hdimen-fromIntegral i)
+toPoint :: Double -> Double -> (Int,Int) -> Point
+toPoint regionSize hdimen (i,j) =
+  (regionSize/2/hdimen) *. ptFromPair (fromIntegral j-hdimen, hdimen-fromIntegral i)
 
 rotate :: Double -> Point -> Point
-rotate theta (x,y) = (x*cos theta - y*sin theta, x*sin theta + y * cos theta)
+rotate theta = under (from ptAsPair) (\(x,y) -> (x*cos theta - y*sin theta, x*sin theta + y * cos theta))
 
 func :: Point -> Double 
-func (x,y) = (x^2+y^2)^2 - (x^2-y^2)
+func pt =
+  let
+    (x,y) = pt^.ptAsPair
+  in
+    (x^2+y^2)^2 - (x^2-y^2)
 
 withinTol :: Double -> (Point -> Double) -> Point -> Bool
 withinTol tol f pt = abs (f pt) < tol
@@ -258,7 +265,11 @@ pad n c str
   = (replicate (n-length str) c) ++ str
 
 elliptic :: Double -> Point -> Double
-elliptic t (x,y) = x^3-2*x+t-y^2
+elliptic t pt = 
+  let
+    (x,y) = pt^.ptAsPair
+  in
+    x^3-2*x+t-y^2
 
 writeRegion :: Double -> (Double -> Point -> Double) -> (Double,Double) -> String -> Int -> Int -> Double -> IO ()
 writeRegion tol f (st,et) fname nframes size regionSize = void $ do

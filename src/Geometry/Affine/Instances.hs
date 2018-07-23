@@ -15,11 +15,12 @@ import Geometry.Region.Class
 
 import Geometry.Affine
 
+import Control.Lens ((^.))
 
 instance Curve Segment where
   type CurveData Segment = ()
-  param (p1,p2) = line p1 p2
-  polyLine () (p1,p2) = makePolyLine [p1,p2]
+  param seg = line (seg^.start) (seg^.end)
+  polyLine () seg = makePolyLine [seg^.start,seg^.end]
   distance () = segmentDistance
   winding () = segmentWinding
 
@@ -36,7 +37,7 @@ instance Curve Circle where
     let
       theta = t*2*pi
     in
-      (radius circle * sin theta, radius circle * cos theta)
+      ptFromPair (circle^.radius * sin theta, circle^.radius * cos theta)
   polyLine = approxPolyLine
   --TODO: fix the exact methods
   --exactDistance = Just $ \circ pt -> abs $ radius circ - distancePt pt (center circ)
@@ -48,11 +49,11 @@ instance Curve Circle where
       --0
 
 instance ImplicitCurve Circle where
-  implicit circ (x,y) = x^2+y^2 - (radius circ)
+  implicit circ pt = (distancePt pt (circ^.center)) - circ^.radius
 
 instance ClosedCurve Circle where
   windingNumber _ = \circ pt ->
-    if radius circ >= distancePt pt (center circ)
+    if circ^.radius >= distancePt pt (circ^.center)
     then
       1
     else

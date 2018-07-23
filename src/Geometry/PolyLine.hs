@@ -11,12 +11,16 @@ import Geometry.Types
 import Geometry.Common
 import Geometry.Affine
 
+import Control.Lens
+import Control.Lens.Fold (minimumOf,sumOf)
+
+import Data.Maybe (fromJust)
 
 polyLineDistance :: PolyLine -> Point -> Double
-polyLineDistance pl pt = segmentFold1 (flip segmentDistance pt) min pl
+polyLineDistance pl pt = fromJust $ minimumOf (segments.to (flip segmentDistance pt)) pl
 
 polyLineWinding :: PolyLine -> Point -> Double
-polyLineWinding pl pt = segmentFold (flip segmentWinding pt) (+) 0 pl
+polyLineWinding pl pt = sumOf (segments.to (flip segmentWinding pt)) pl
 
 
 

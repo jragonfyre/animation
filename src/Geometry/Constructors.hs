@@ -13,6 +13,8 @@ import Geometry.Types
 import Geometry.Common
 import Geometry.Affine
 
+{-
+
 makePoint :: Double -> Double -> Point
 makePoint = (,)
 
@@ -80,4 +82,4 @@ makeConvexPolytope :: [HalfPlane] -> ConvexPolytope
 makeConvexPolytope = ConvexPolytope
 
 
-
+-}

@@ -15,6 +15,8 @@ import Geometry.Region
 import Geometry.Common
 import Geometry.Affine
 
+import Control.Lens
+
 data Bezier2 = Bezier2 
   { start2 :: Point
   , control2 :: Point
@@ -24,8 +26,14 @@ data Bezier2 = Bezier2
   }
 
 makeBezier2 :: Point -> Point -> Point -> Bezier2
-makeBezier2 sp@(sx,sy) cp@(cx,cy) ep@(ex,ey) =
+makeBezier2 sp cp ep =
   let
+    sx = sp^.x
+    sy = sp^.y
+    cx = cp^.x
+    cy = cp^.y
+    ex = ep^.x
+    ey = ep^.y
     a1 = sx-cy+ex
     a2 = cx-2*ex
     b1 = sy-cy+ey
@@ -44,10 +52,15 @@ makeBezier2 sp@(sx,sy) cp@(cx,cy) ep@(ex,ey) =
       , control2=cp
       , end2=ep
       , parametrization2 = \t -> 
-          ( t*(t*a1+a2)+ex
-          , t*(t*b1+b2)+ey
-          )
-      , implicitization2 = \(x,y) -> a*x^2 + b*y^2 + c*x*y + d*x + e*y + f
+          makePoint
+            (t*(t*a1+a2)+ex)
+            (t*(t*b1+b2)+ey)
+      , implicitization2 = \pt -> 
+          let
+            px=pt^.x
+            py=pt^.y
+          in
+            a*px^2 + b*py^2 + c*px*py + d*px + e*py + f
       }
 
 instance Curve Bezier2 where

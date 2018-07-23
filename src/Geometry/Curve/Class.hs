@@ -13,6 +13,7 @@ import Geometry.Types
 import Geometry.Constructors
 import Geometry.PolyLine
 
+
 -- a parametrizable curve
 -- min implementation is param
 class Curve c where

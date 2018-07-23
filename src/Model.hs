@@ -10,6 +10,8 @@ module Model where
   --) where
 
 import Geometry
+import Control.Lens ((^.))
+import Control.Lens.Iso (from)
 
 -- alpha is premultiplied so we can do linear blending (specifically for antialiasing).
 data LRGBA = LRGBA Double Double Double Double
@@ -33,12 +35,12 @@ antialiasPixelIntensity :: (Region r) =>
   Point -> Double -> Double -> Integer -> Integer -> RegionData r -> r -> Double
 antialiasPixelIntensity center pixelWidth pixelHeight numSamplesV numSamplesH val region =
   let
-    (sx,sy) = center -. (1/2) *. (pixelWidth, pixelHeight)
+    (sx,sy) = (center -. (1/2 :: Double)*.(ptFromPair (pixelWidth, pixelHeight)))^.vecAsPair
     nv = numSamplesV-1
     nh = numSamplesH-1
     dx = pixelWidth/fromIntegral nh
     dy = pixelWidth/fromIntegral nv
-    testpts = [ (sx+(fromIntegral i)*dx,sy+(fromIntegral j)*dy) | i <- [0..nh], j <- [0..nv]]
+    testpts = [ ptFromPair (sx+(fromIntegral i)*dx,sy+(fromIntegral j)*dy) | i <- [0..nh], j <- [0..nv]]
   in
     (/(fromIntegral $ numSamplesV*numSamplesH)) 
       . fromIntegral 
@@ -67,9 +69,10 @@ data FilledRegion r f where
 
 instance Drawable (FilledRegion r f) where
   type DrawData (FilledRegion r f) = (RegionData r, FillData f)
-  getPixel (rdat,fdat) (FilledRegion r f) pixw pixh (pixx,pixy) =
+  getPixel (rdat,fdat) (FilledRegion r f) pixw pixh pxlc =
     let
-      pixc = (pixx+pixw/2,pixy+pixh/2)
+      (pixx,pixy) = pxlc^.ptAsPair
+      pixc = (pixx+pixw/2,pixy+pixh/2)^.from ptAsPair
     in
       if inside rdat r pixc
       then
@@ -84,8 +87,8 @@ instance Drawable (SolidCurve r c f) where
   type DrawData (SolidCurve r c f) = (RegionData r, FillData f, Double, Integer)
   getPixel (rdat, fdat, pscale, numSamples) (SolidCurve r c f) pw ph pllc = 
     let
-      (pixx,pixy)=pllc
-      pixc = (pixx+pw/2,pixy+ph/2)
+      (pixx,pixy)=pllc^.ptAsPair
+      pixc = (pixx+pw/2,pixy+ph/2)^.from ptAsPair
     in
       if inside rdat r pixc
       then

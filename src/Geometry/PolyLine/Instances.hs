@@ -19,16 +19,18 @@ import Geometry.PolyLine
 
 import Data.Array
 
+import Control.Lens ((^.))
+
 
 polygonInside :: Polygon -> Point -> Bool
-polygonInside Polygon{..} pt = case polyRegion of
+polygonInside poly pt = case poly^.region of
   Just convex ->
     inside () convex pt
   Nothing ->
-    (approxWindingNumber () polyBdry pt) /= 0
+    (approxWindingNumber () (poly^.boundary) pt) /= 0
 
 polygonWindingNumber :: Polygon -> Point -> Integer
-polygonWindingNumber Polygon{..} pt = case polyRegion of
+polygonWindingNumber poly pt = case poly^.region of
   Just convex ->
     if inside () convex pt
     then
@@ -36,27 +38,28 @@ polygonWindingNumber Polygon{..} pt = case polyRegion of
     else
       0
   Nothing ->
-    approxWindingNumber () polyBdry pt
+    approxWindingNumber () (poly^.boundary) pt
 
 instance Curve PolyLine where
   type CurveData PolyLine = ()
-  param (PolyLine arr) t = 
+  param pl t = 
     let
+      arr = pl^.plAsArray
       (l,r) = bounds arr
       ts = t*(fromIntegral (r-l)) -- rescaled to match 0-1 per segment of the polyline
       ix = floor $ ts -- index of beginning of segment
       t' = ts - fromIntegral ix -- index in segment
     in
-      param (arr ! ix,arr!(ix+1)) t'
+      param (makeSegment (arr!ix) (arr!(ix+1))) t'
   polyLine () = id
   distance () = polyLineDistance
   winding () = polyLineWinding
 
 instance Curve Polygon where
   type CurveData Polygon = ()
-  param Polygon{..} t = param polyBdry t
-  polyLine () Polygon{..} = polyBdry
-  distance () Polygon{..} pt = polyLineDistance polyBdry pt
+  param poly t = param (poly^.boundary) t
+  polyLine () poly = poly^.boundary
+  distance () poly pt = polyLineDistance (poly^.boundary) pt
   -- TODO: update this
   winding () poly pt = fromIntegral $ polygonWindingNumber poly pt --polyLineWinding polyBdry pt
 
