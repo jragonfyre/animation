@@ -23,5 +23,6 @@ cabal.project.local~
 .stack-work/
 Animation.cabal
 *~
-sandbox/
+sandbox/*
+!sandbox/*.sh
 *.swp
