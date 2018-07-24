@@ -10,24 +10,25 @@ module Geometry.Curve.Structure
   ) where
 {-
 
-type Parametrization = Double -> Point  -- parametrization domain is [0,1]
-type Implicitization = Point -> Double  
--- should be 0 at curve, and nonzero not at curve, ideally sign should change across curve
-type ApproximationStrategy = Double -> [Double]
 
 data Curve = Curve
   { param :: Parametrization -- should start at 0 end at 1
-  , implicit :: Maybe Implicitization 
+  , implicit :: Maybe ImplicitCurve -- implicit is used to detect what side of the curve a pixel falls on.
+  -- can be used instead of distance to gauge distance from the curve
+  -- also useful to bound a region
   , polyLine :: PolyLine -- a polyline approximation to the curve
   , distance :: Point -> Double
   , winding :: Point -> Double
-  , closed :: Maybe ClosureInfo
+  , closed :: Maybe ClosedCurve
   }
 
-data ClosureInfo = CCurve
+
+data ClosedCurve = CCurve
   { polygon :: Polygon
   , windingNumber :: Point -> Integer
+  , curve :: Curve
   }
+
 
 evenApproximator :: ApproximationStrategy
 evenApproximator interval 

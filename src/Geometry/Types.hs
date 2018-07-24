@@ -231,6 +231,15 @@ newtype ConvexPolytope = ConvexPolytope [HalfPlane]
 makeConvexPolytope :: [HalfPlane] -> ConvexPolytope
 makeConvexPolytope = ConvexPolytope
 
+convtopeToHPlanes :: ConvexPolytope -> [HalfPlane]
+convtopeToHPlanes (ConvexPolytope hps) = hps
+
+convtopeAsHPlanes :: Iso' ConvexPolytope [HalfPlane]
+convtopeAsHPlanes = iso convtopeToHPlanes makeConvexPolytope
+
+hplanes :: Fold ConvexPolytope HalfPlane
+hplanes = folding convtopeToHPlanes
+
 -- closed polygon
 -- is a polyline whose first and last points are the same
 data Polygon = Polygon 
@@ -246,4 +255,6 @@ makePolygon = Polygon
 
 newtype ImplicitRegion = ImplicitRegion (Point -> Bool) 
   deriving (Generic)
+
+
 

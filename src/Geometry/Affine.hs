@@ -191,6 +191,12 @@ buildHalfPlanePoint p v d =
   else 
     makeHalfPlane (zeroVector -. v) (-d)
 
+insideHalfPlane :: HalfPlane -> Point -> Bool
+insideHalfPlane hp pt = (hp^.normal) `dot` pt >= hp^.radius
+
+insideConvtope :: ConvexPolytope -> Point -> Bool
+insideConvtope conv pt = allOf hplanes (flip insideHalfPlane pt) conv
+
 avgPoints :: [Point] -> Point
 avgPoints ps = (1/fromIntegral (length ps) :: Double) *. foldr (+.) origin ps
 
@@ -212,3 +218,4 @@ buildPolygon ps isConvex =
               %~ (uncurry (buildHalfPlanePoint center) . segmentToLine)
       else
         Nothing
+
