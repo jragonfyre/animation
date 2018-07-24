@@ -8,6 +8,8 @@ import Control.Monad (void)
 import Control.Lens ((^.))
 import Control.Lens.Iso (under,from)
 
+import Geometry.Region.Types
+
 regularPolygon :: Integer -> Double -> Polygon
 regularPolygon n s = flip buildPolygon True . map (\i -> 
   let
@@ -80,8 +82,8 @@ withinTol tol f pt = abs (f pt) < tol
 positive :: (Point -> Double) -> Point -> Bool
 positive f pt = f pt > 0
 
-regionFunc :: Double -> ImplicitRegion
-regionFunc tol = ImplicitRegion $ withinTol tol func
+regionFunc :: Double -> Region
+regionFunc tol = implicitRegion func (withinTol tol)
 
 --drawableImage :: (Drawable d) => DrawData d -> d -> Int -> Double -> Image RPU RGB Double
 --drawableImage 

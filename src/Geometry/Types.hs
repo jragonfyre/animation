@@ -253,8 +253,12 @@ makeFields ''Polygon
 makePolygon :: PolyLine -> Maybe ConvexPolytope -> Polygon
 makePolygon = Polygon
 
-newtype ImplicitRegion = ImplicitRegion (Point -> Bool) 
-  deriving (Generic)
+--newtype ImplicitRegion = ImplicitRegion (Point -> Bool) 
+--deriving (Generic)
 
+type Parametrization = Double -> Point  -- parametrization domain is [0,1]
+type Implicitization = Point -> Double  
+-- should be 0 at curve, and nonzero not at curve, sign should change across curve
+type ApproximationStrategy = Double -> [Double]
 
 

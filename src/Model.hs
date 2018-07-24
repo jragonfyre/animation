@@ -83,6 +83,7 @@ instance Drawable (FilledRegion r f) where
 data SolidCurve r c f where
   SolidCurve :: (Region r, ImplicitCurve c, Fill f) => r -> c -> f -> SolidCurve r c f
 
+{-
 instance Drawable (SolidCurve r c f) where
   type DrawData (SolidCurve r c f) = (RegionData r, FillData f, Double, Integer)
   getPixel (rdat, fdat, pscale, numSamples) (SolidCurve r c f) pw ph pllc = 
@@ -105,7 +106,7 @@ instance Drawable (SolidCurve r c f) where
           return $ LRGBA (r*s) (g*s) (b*s) (a*s)
       else
         Nothing
-
+-}
       
 
 

@@ -12,13 +12,13 @@ module Geometry
   , module Geometry.Constructors
   , module Geometry.Common
   , module Geometry.Curve
-  , module Geometry.Curve.Class
+  , module Geometry.Curve.Types
   , module Geometry.Region
-  , module Geometry.Region.Class
+  , module Geometry.Region.Types
   , module Geometry.Affine
-  , module Geometry.Affine.Instances
+--  , module Geometry.Affine.Instances
   , module Geometry.PolyLine
-  , module Geometry.PolyLine.Instances
+--  , module Geometry.PolyLine.Instances
   , module Geometry.Bezier
   ) where
 
@@ -29,14 +29,14 @@ import Geometry.Constructors
 import Geometry.Common
 
 import Geometry.Curve
-import Geometry.Curve.Class
+import Geometry.Curve.Types
 import Geometry.Region
-import Geometry.Region.Class
+import Geometry.Region.Types
 
 import Geometry.Affine
-import Geometry.Affine.Instances
+--import Geometry.Affine.Instances
 import Geometry.PolyLine
-import Geometry.PolyLine.Instances
+--import Geometry.PolyLine.Instances
 
 import Geometry.Bezier
 

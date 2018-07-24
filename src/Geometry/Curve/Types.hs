@@ -20,10 +20,6 @@ import Control.Lens
 
 import Utils
 
-type Parametrization = Double -> Point  -- parametrization domain is [0,1]
-type Implicitization = Point -> Double  
--- should be 0 at curve, and nonzero not at curve, sign should change across curve
-type ApproximationStrategy = Double -> [Double]
 
 data Curve = Curve
   { _curveParam :: Parametrization -- should start at 0 end at 1
@@ -42,7 +38,7 @@ data Curve = Curve
 data ClosedCurve = CCurve
   { _closedCurvePolygon :: Polygon
   , closedCurveWindingNumber :: Maybe (Point -> Integer)
-  , closedCurveInside :: Maybe (Point -> Bool)
+  , closedCurveInsideCurve :: Maybe (Point -> Bool)
   , closedCurveCurve :: Curve
   }
 
@@ -84,12 +80,12 @@ polygonWindingNumber poly pt = case poly^.region of
     approxWindingNumber (polyLineWinding (poly^.boundary)) pt
 
 -- TODO: finish this
-inside :: Lens' ClosedCurve (Point -> Bool)
-inside =
+insideCurve :: Lens' ClosedCurve (Point -> Bool)
+insideCurve =
   lensWithDefault
     (polygonInside . _closedCurvePolygon) 
-    closedCurveInside 
-    (\ccurve insd -> fixClosedPtrsCC ccurve{closedCurveInside = Just insd})
+    closedCurveInsideCurve 
+    (\ccurve insd -> fixClosedPtrsCC ccurve{closedCurveInsideCurve = Just insd})
 
 -- TODO: finish this too
 windingNumber :: Lens' ClosedCurve (Point -> Integer)
@@ -116,16 +112,21 @@ polyLineCurve pl = buildCurveWithApproximation (polyLineParametrization pl) pl
 polygonCCurve :: Polygon -> ClosedCurve
 polygonCCurve poly = buildClosedCurveWithApproximation (poly^.boundary.to polyLineParametrization) poly
 
-buildCurveWithApproximation :: Parametrization -> PolyLine -> Curve
-buildCurveWithApproximation param pl =
+makeCurve 
+  :: Parametrization -> PolyLine -> Maybe Implicitization -> 
+      Maybe (Point -> Double) -> Maybe (Point -> Double) -> Curve
+makeCurve param pl imp dist wind = 
     Curve
       { _curveParam = param
-      , curveImplicit = Nothing
+      , curveImplicit = imp
       , _curvePolyLine = pl
-      , curveDistance = Nothing
-      , curveWinding = Nothing
+      , curveDistance = dist
+      , curveWinding = wind
       , curveClosed = Nothing
       }
+
+buildCurveWithApproximation :: Parametrization -> PolyLine -> Curve
+buildCurveWithApproximation param pl = makeCurve param pl Nothing Nothing Nothing
 
 {-
 buildCurveAndApproximate :: Parametrization -> [Double] -> Curve
@@ -157,26 +158,31 @@ pointToEachOther oc occ =
 approxWindingNumber :: (Point -> Double) -> (Point -> Integer)
 approxWindingNumber = (round .)
 
-buildClosedCurveWithApproximation :: Parametrization -> Polygon -> ClosedCurve
-buildClosedCurveWithApproximation param poly = 
+makeClosedCurve :: Parametrization -> Polygon -> Maybe Implicitization -> Maybe (Point -> Double) -> 
+  Maybe (Point -> Double) -> Maybe (Point -> Integer) -> Maybe (Point -> Bool) ->
+  ClosedCurve
+makeClosedCurve param poly imp dist wind windNum insCurve =
   let
-    ccWinding = approxWindingNumber $ polyLineWinding (poly^.boundary)
     c = Curve
       { _curveParam = param
-      , curveImplicit = Nothing
+      , curveImplicit = imp
       , _curvePolyLine = poly^.boundary
-      , curveDistance = Nothing
-      , curveWinding = Nothing
+      , curveDistance = dist
+      , curveWinding = wind
       , curveClosed = Just cc
       }
     cc = CCurve
       { _closedCurvePolygon = poly
-      , closedCurveWindingNumber = Nothing
-      , closedCurveInside = Nothing
+      , closedCurveWindingNumber = windNum
+      , closedCurveInsideCurve = insCurve
       , closedCurveCurve = c
       }
   in
     cc
+
+buildClosedCurveWithApproximation :: Parametrization -> Polygon -> ClosedCurve
+buildClosedCurveWithApproximation param poly = 
+  makeClosedCurve param poly Nothing Nothing Nothing Nothing Nothing
 
 makeLensesWith onlyGetters ''Curve
 makeLensesWith onlyGetters ''ClosedCurve
