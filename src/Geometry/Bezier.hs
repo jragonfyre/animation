@@ -9,7 +9,7 @@ module Geometry.Bezier where
 
 import Geometry.Types
 import Geometry.Constructors
-import Geometry.Curve.Class
+import Geometry.Curve.Types
 import Geometry.Region.Class
 import Geometry.Region
 import Geometry.Common
@@ -63,6 +63,31 @@ makeBezier2 sp cp ep =
             a*px^2 + b*py^2 + c*px*py + d*px + e*py + f
       }
 
+data Bezier3 = Bezier3 
+  { start3 :: Point
+  , stCont3 :: Point
+  , endCont3 :: Point
+  , end3 :: Point
+  , parametrization3 :: Double -> Point
+  , implicitization3 :: Point -> Double
+  }
+
+bezier2Curve :: Bezier2 -> Double -> Curve
+bezier2Curve bez d = 
+  buildCurveWithApproximation 
+    (parametrization2 bez)
+    (approximate (parametrization2 bez) evenApproximator d)
+  & implicit .~ (Just $ implicitization2 bez)
+
+bezier3Curve :: Bezier3 -> Double -> Curve
+bezier3Curve bez d = 
+  buildCurveWithApproximation 
+    (parametrization3 bez)
+    (approximate (parametrization3 bez) evenApproximator d)
+  & implicit .~ (Just $ implicitization3 bez)
+
+
+{-
 instance Curve Bezier2 where
   type CurveData Bezier2 = Double
   param = parametrization2
@@ -76,14 +101,6 @@ instance Curve Bezier2 where
 instance ImplicitCurve Bezier2 where
   implicit = implicitization2
 
-data Bezier3 = Bezier3 
-  { start3 :: Point
-  , stCont3 :: Point
-  , endCont3 :: Point
-  , end3 :: Point
-  , parametrization3 :: Double -> Point
-  , implicitization3 :: Point -> Double
-  }
 
 instance Curve Bezier3 where
   type CurveData Bezier3 = Double
@@ -98,6 +115,7 @@ instance Curve Bezier3 where
 instance ImplicitCurve Bezier3 where
   implicit = implicitization3
 
+-}
 
 --data Bezier = Bezier 
 

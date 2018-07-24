@@ -13,7 +13,7 @@ import Geometry.Types
 import Geometry.Constructors
 import Geometry.PolyLine
 
-
+--{-
 -- a parametrizable curve
 -- min implementation is param
 class Curve c where
@@ -62,3 +62,5 @@ approxWindingNumber val curve pt = round $ winding val curve pt
 approxInside :: (ClosedCurve c) => CurveData c -> c -> Point -> Bool
 approxInside val curve pt = (windingNumber val curve pt) /= 0
 
+{-
+-}
