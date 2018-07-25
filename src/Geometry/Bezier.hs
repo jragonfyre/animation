@@ -8,11 +8,11 @@
 module Geometry.Bezier where
 
 import Geometry.Types
-import Geometry.Constructors
+--import Geometry.Constructors
 import Geometry.Curve.Types
-import Geometry.Region.Class
+--import Geometry.Region.Class
 import Geometry.Region
-import Geometry.Common
+--import Geometry.Common
 import Geometry.Affine
 
 import Control.Lens

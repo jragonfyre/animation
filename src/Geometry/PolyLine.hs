@@ -8,7 +8,7 @@
 module Geometry.PolyLine where
 
 import Geometry.Types
-import Geometry.Common
+--import Geometry.Common
 import Geometry.Affine
 
 import Control.Lens

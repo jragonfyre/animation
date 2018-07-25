@@ -9,8 +9,8 @@
 module Geometry 
   ( module Geometry
   , module Geometry.Types
-  , module Geometry.Constructors
-  , module Geometry.Common
+--  , module Geometry.Constructors
+--  , module Geometry.Common
   , module Geometry.Curve
   , module Geometry.Curve.Types
   , module Geometry.Region
@@ -25,8 +25,8 @@ module Geometry
 import Data.Array 
 
 import Geometry.Types
-import Geometry.Constructors
-import Geometry.Common
+--import Geometry.Constructors
+--import Geometry.Common
 
 import Geometry.Curve
 import Geometry.Curve.Types

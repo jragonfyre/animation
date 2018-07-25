@@ -13,8 +13,8 @@ module Geometry.Curve
 import Data.Array
 
 import Geometry.Types
-import Geometry.Constructors
-import Geometry.Common
+--import Geometry.Constructors
+--import Geometry.Common
 
 import Geometry.Curve.Types
 import Geometry.Region.Types
@@ -53,11 +53,11 @@ circleImplicitization :: Circle -> Implicitization
 circleImplicitization circ pt = 
   (distancePt pt (circ^.center)) - circ^.radius
 
-circleCurve :: Circle -> Double -> Curve
-circleCurve circle d = (circleCCurve circle d)^.re _Closed
+circleCurve :: Double -> Circle -> Curve
+circleCurve d circle = (circleCCurve d circle)^.re _Closed
 
-circleCCurve :: Circle -> Double -> ClosedCurve
-circleCCurve circ d = 
+circleCCurve :: Double -> Circle -> ClosedCurve
+circleCCurve d circ = 
   let
     param = circleParametrization circ
     imp = circleImplicitization circ

@@ -5,7 +5,7 @@ import Model
 import qualified Graphics.Image as I
 import Graphics.Image (RPU,RGB,Image)
 import Control.Monad (void)
-import Control.Lens ((^.))
+import Control.Lens ((^.),to,re)
 import Control.Lens.Iso (under,from)
 
 import Geometry.Region.Types
@@ -20,39 +20,6 @@ regularPolygon n s = flip buildPolygon True . map (\i ->
 
 heptagon = regularPolygon 7 1.0
 
-{-
-icPix :: (Region r) => Point -> Double -> Integer -> RegionData r -> r -> Double
-icPix c w s val r = implicitCurvePix c w w s s val r
-
-implicitCurvePix :: (Region r) => 
-  Point -> Double -> Double -> Integer -> Integer -> RegionData r -> r -> Double
-implicitCurvePix c w h nv nh v r = 
-  let 
-    t = antialiasPixelIntensity c w h nv nh v r
-  in
-    (-4)*t*(t-1)
-
-aaPix :: (Region r) => Point -> Double -> Integer -> RegionData r -> r -> Double
-aaPix c w s val r = antialiasPixelIntensity c w w s s val r
-
-antialiasPixelIntensity :: (Region r) =>
-  Point -> Double -> Double -> Integer -> Integer -> RegionData r -> r -> Double
-antialiasPixelIntensity center pixelWidth pixelHeight numSamplesV numSamplesH val region =
-  let
-    (sx,sy) = center -. (1/2) *. (pixelWidth, pixelHeight)
-    nv = numSamplesV-1
-    nh = numSamplesH-1
-    dx = pixelWidth/fromIntegral nh
-    dy = pixelWidth/fromIntegral nv
-    testpts = [ (sx+(fromIntegral i)*dx,sy+(fromIntegral j)*dy) | i <- [0..nh], j <- [0..nv]]
-  in
-    (/(fromIntegral $ numSamplesV*numSamplesH)) 
-      . fromIntegral 
-      . length 
-      . filter (inside val region)
-      $ testpts
-
--}
 
 bezier1 :: Bezier2
 bezier1 = makeBezier2 (ptFromPair (-0.7,-0.2)) (ptFromPair (1,1)) (ptFromPair (0.7,-0.8))
@@ -76,14 +43,9 @@ func pt =
   in
     (x^2+y^2)^2 - (x^2-y^2)
 
-withinTol :: Double -> (Point -> Double) -> Point -> Bool
-withinTol tol f pt = abs (f pt) < tol
-
-positive :: (Point -> Double) -> Point -> Bool
-positive f pt = f pt > 0
 
 regionFunc :: Double -> Region
-regionFunc tol = implicitRegion func (withinTol tol)
+regionFunc tol = implicitRegion func (withinTolerance tol)
 
 --drawableImage :: (Drawable d) => DrawData d -> d -> Int -> Double -> Image RPU RGB Double
 --drawableImage 
@@ -95,8 +57,8 @@ curveImage tol f dimen regionSize pixScale t r =
     hdimen = fromIntegral $ dimen `div` 2 :: Double
     dimens = (dimen,dimen)
     pixWidth = (regionSize/fromIntegral dimen) 
-    region = ImplicitRegion $ positive g
-    bRegion = ImplicitRegion $ withinTol (tol) g
+    region = implicitRegion g $ isPositive 
+    bRegion = implicitRegion g $ withinTolerance (tol)
     --sRegion = ImplicitRegion $ withinTol (tol-2*pixWidth) g
     --lRegion = ImplicitRegion $ withinTol (tol+2*pixWidth) g
   in
@@ -104,9 +66,9 @@ curveImage tol f dimen regionSize pixScale t r =
       let 
         pt = rotate (r) (toPoint regionSize hdimen (i,j))
         pix = I.PixelRGB ((cos t)^2) ((sin t)^2) (0.5+cos t * sin t)
-        s = icPix pt (pixWidth*pixScale) 6 () region
+        s = icPix pt (pixWidth*pixScale) 6 region
       in
-        if inside () bRegion pt
+        if (bRegion^.inside) pt
         then
           fmap (s*) pix 
         else
@@ -121,9 +83,9 @@ regionImage tol f dimen regionSize t r =
     hdimen = fromIntegral $ dimen `div` 2 :: Double
     dimens = (dimen,dimen)
     pixWidth = (regionSize/fromIntegral dimen) 
-    region = ImplicitRegion $ withinTol (tol) g
-    sRegion = ImplicitRegion $ withinTol (tol-2*pixWidth) g
-    lRegion = ImplicitRegion $ withinTol (tol+2*pixWidth) g
+    region = implicitRegion g $ withinTolerance (tol)
+    sRegion = implicitRegion g $ withinTolerance (tol-2*pixWidth)
+    lRegion = implicitRegion g $ withinTolerance (tol+2*pixWidth)
     --sHeptagon = regularPolygon 7 (1-2*pixWidth)
     --lHeptagon = regularPolygon 7 (1+2*pixWidth)
   in
@@ -132,11 +94,11 @@ regionImage tol f dimen regionSize t r =
         pt = rotate (r) (toPoint regionSize hdimen (i,j))
         pix = I.PixelRGB ((cos t)^2) ((sin t)^2) (0.5+cos t * sin t)
         --d = distance 0.0 heptagon pt
-        s = aaPix pt pixWidth 6 () region
+        s = aaPix pt pixWidth 6 region
       in
-        if inside () lRegion pt
+        if (lRegion^.inside) pt
         then
-          if inside () sRegion pt
+          if (sRegion^.inside) pt
           then
             pix
           else
@@ -160,11 +122,11 @@ aaHeptagonImage dimen t =
         pt = rotate (2*t) (toPoint 2.1 hdimen (i,j))
         pix = I.PixelRGB ((cos t)^2) ((sin t)^2) (0.5+cos t * sin t)
         --d = distance 0.0 heptagon pt
-        s = aaPix pt pixWidth 6 () heptagon
+        s = aaPix pt pixWidth 6 (heptagon^.to polygonCCurve.to closedCurveRegion)
       in
-        if inside () lHeptagon pt
+        if (lHeptagon^.to polygonCCurve.insideCurve) pt
         then
-          if inside () sHeptagon pt
+          if (sHeptagon^.to polygonCCurve.insideCurve) pt
           then
             pix
           else
@@ -183,10 +145,10 @@ heptagonImage dimen t =
       let 
         pt = rotate (2*t) (toPoint 2.1 hdimen (i,j))
         pix = I.PixelRGB ((cos t)^2) ((sin t)^2) (0.5+cos t * sin t)
-        d = distance () heptagon pt
+        d = (heptagon^.to polygonCCurve.re _Closed.distance) pt
         s = quadraticFalloff (d/0.03)
       in
-        if inside () heptagon pt
+        if (heptagon^.to polygonCCurve.insideCurve) pt
         then
           pix
         else
@@ -242,20 +204,20 @@ segmentImage falloff width dimen t =
         pixRed = I.PixelRGB 1 0 0
         pixGreen = I.PixelRGB 0 1 0
         pixBlue = I.PixelRGB 0 0 1
-        d1 = distance 0.0 circ1 pt
-        d2 = distance 0.0 circ2 pt
-        d = distance () seg pt
+        d1 = (circ1^.to (circleCurve 0.1).distance) pt
+        d2 = (circ2^.to (circleCurve 0.1).distance) pt
+        d = (seg^.to segmentCurve.distance) pt
         s = falloff (d/width)
         alpha1 = falloff (d1/0.01)
         alpha2 = falloff (d2/0.01)
         g = (1-alpha1)*(1-alpha2) * s
         pixLine = I.PixelRGB alpha1 g alpha2
       in
-        if inside () circ1 pt 
+        if (circ1^.to circleRegion.inside) pt 
         then
           pixRed
         else
-          if inside () circ2 pt
+          if (circ2^.to circleRegion.inside) pt
           then
             pixBlue
           else
