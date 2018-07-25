@@ -19,7 +19,7 @@ data Region = Region
   }
 
 makeRegion :: (Point -> Bool) -> Region
-makeRegion f = Region f Nothing
+makeRegion f = Region f Nothing 
 
 makeFields ''Region
 

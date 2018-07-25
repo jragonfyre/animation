@@ -56,14 +56,6 @@ convtopeRegion conv = makeRegion (\pt -> allOf hplanes (\hp -> (hp^.to halfPlane
 
 
 
-
-{-
-instance (ClosedCurve c) => Region c where
-instance Region ClosedCurve where
-  inside = insideCC
-  distanceBdry = Just distance
--}
-
 {-
 -- distance from a point to a region
 distanceTo :: (Region r) => RegionData r -> r -> Point -> Maybe Double

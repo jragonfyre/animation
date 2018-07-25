@@ -15,12 +15,24 @@ import Control.Lens.Iso (from)
 
 import Data.Maybe (mapMaybe)
 
+monoidMaybe :: (Monoid m) => Maybe m -> m
+monoidMaybe Nothing = mempty
+monoidMaybe (Just m) = m
+
 -- alpha is premultiplied so we can do linear blending (specifically for antialiasing).
 data LRGBA = LRGBA Double Double Double Double
   deriving (Show, Read, Eq, Ord)
 
 invisible :: LRGBA
 invisible = LRGBA 0 0 0 0
+
+-- associative alpha blending (assuming premultiplied alpha)
+compose :: LRGBA -> LRGBA -> LRGBA
+compose (LRGBA r g b a) (LRGBA x y z w) = LRGBA (r+(1-a)*x) (g+(1-a)*y) (b+(1-a)*z) (a+w-a*w)
+
+instance Monoid LRGBA where
+  mempty = invisible
+  mappend = compose
 
 instance Summable LRGBA LRGBA LRGBA where
   (+.) (LRGBA r g b a) (LRGBA x y z w) = LRGBA (r+x) (g+y) (b+z) (a+w)
@@ -37,7 +49,6 @@ implicitCurvePix pix nv nh r =
     t = antialiasPixelIntensity pix nv nh r
   in
     (-4)*t*(t-1)
-
 
 
 aaPix :: Pixel -> Integer -> Region -> Double

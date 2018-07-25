@@ -268,6 +268,7 @@ data Box = Box
   { _boxCorner :: Point -- lower left corner
   , _boxDimensions :: Vector
   }
+  deriving (Show, Read, Eq, Ord, Generic)
 
 
 makeBox :: Point -> Vector -> Box
