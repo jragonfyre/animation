@@ -66,7 +66,7 @@ curveImage tol f dimen regionSize pixScale t r =
       let 
         pt = rotate (r) (toPoint regionSize hdimen (i,j))
         pix = I.PixelRGB ((cos t)^2) ((sin t)^2) (0.5+cos t * sin t)
-        s = icPix pt (pixWidth*pixScale) 6 region
+        s = icPix (makeSquare pt (pixWidth*pixScale)) 6 region
       in
         if (bRegion^.inside) pt
         then
@@ -75,6 +75,8 @@ curveImage tol f dimen regionSize pixScale t r =
           I.PixelRGB 0 0 0
     )
 
+toPixel :: LRGBA -> I.Pixel RGB Double
+toPixel (LRGBA r g b _) = I.PixelRGB r g b
 
 regionImage :: Double -> (Double -> Point -> Double) -> Int -> Double -> Double -> Double -> Image RPU RGB Double
 regionImage tol f dimen regionSize t r = 
@@ -86,6 +88,8 @@ regionImage tol f dimen regionSize t r =
     region = implicitRegion g $ withinTolerance (tol)
     sRegion = implicitRegion g $ withinTolerance (tol-2*pixWidth)
     lRegion = implicitRegion g $ withinTolerance (tol+2*pixWidth)
+    color = LRGBA ((cos t)^2) ((sin t)^2) (0.5+cos t * sin t) 1
+    renderer = msaa 6 (filledRegion (solidFill color) region)
     --sHeptagon = regularPolygon 7 (1-2*pixWidth)
     --lHeptagon = regularPolygon 7 (1+2*pixWidth)
   in
@@ -94,7 +98,7 @@ regionImage tol f dimen regionSize t r =
         pt = rotate (r) (toPoint regionSize hdimen (i,j))
         pix = I.PixelRGB ((cos t)^2) ((sin t)^2) (0.5+cos t * sin t)
         --d = distance 0.0 heptagon pt
-        s = aaPix pt pixWidth 6 region
+        aaPix = toPixel $ renderer (makeSquare pt pixWidth)
       in
         if (lRegion^.inside) pt
         then
@@ -102,7 +106,7 @@ regionImage tol f dimen regionSize t r =
           then
             pix
           else
-            fmap (s*) pix 
+            aaPix
         else
           I.PixelRGB 0 0 0
     )
@@ -122,7 +126,7 @@ aaHeptagonImage dimen t =
         pt = rotate (2*t) (toPoint 2.1 hdimen (i,j))
         pix = I.PixelRGB ((cos t)^2) ((sin t)^2) (0.5+cos t * sin t)
         --d = distance 0.0 heptagon pt
-        s = aaPix pt pixWidth 6 (heptagon^.to polygonCCurve.to closedCurveRegion)
+        s = aaPix (makeSquare pt pixWidth) 6 (heptagon^.to polygonCCurve.to closedCurveRegion)
       in
         if (lHeptagon^.to polygonCCurve.insideCurve) pt
         then

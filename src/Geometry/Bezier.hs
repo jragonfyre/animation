@@ -8,11 +8,8 @@
 module Geometry.Bezier where
 
 import Geometry.Types
---import Geometry.Constructors
 import Geometry.Curve.Types
---import Geometry.Region.Class
 import Geometry.Region
---import Geometry.Common
 import Geometry.Affine
 
 import Control.Lens
@@ -87,37 +84,6 @@ bezier3Curve bez d =
   & implicit .~ (Just $ implicitization3 bez)
 
 
-{-
-instance Curve Bezier2 where
-  type CurveData Bezier2 = Double
-  param = parametrization2
-  --polyLine :: CurveData c -> c -> PolyLine
-  polyLine = approxPolyLine
-  --distance :: CurveData c -> c -> Point -> Double
-  distance = approxDistance
-  --winding :: CurveData c -> c -> Point -> Double
-  winding = approxWinding
-
-instance ImplicitCurve Bezier2 where
-  implicit = implicitization2
-
-
-instance Curve Bezier3 where
-  type CurveData Bezier3 = Double
-  param = parametrization3
-  --polyLine :: CurveData c -> c -> PolyLine
-  polyLine = approxPolyLine
-  --distance :: CurveData c -> c -> Point -> Double
-  distance = approxDistance
-  --winding :: CurveData c -> c -> Point -> Double
-  winding = approxWinding
-
-instance ImplicitCurve Bezier3 where
-  implicit = implicitization3
-
--}
-
---data Bezier = Bezier 
 
 
 

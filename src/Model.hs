@@ -13,39 +13,71 @@ import Geometry
 import Control.Lens ((^.))
 import Control.Lens.Iso (from)
 
+import Data.Maybe (mapMaybe)
+
 -- alpha is premultiplied so we can do linear blending (specifically for antialiasing).
 data LRGBA = LRGBA Double Double Double Double
   deriving (Show, Read, Eq, Ord)
 
-icPix :: Point -> Double -> Integer -> Region -> Double
-icPix c w s r = implicitCurvePix c w w s s r
+invisible :: LRGBA
+invisible = LRGBA 0 0 0 0
 
-implicitCurvePix :: Point -> Double -> Double -> Integer -> Integer -> Region -> Double
-implicitCurvePix c w h nv nh r = 
+instance Summable LRGBA LRGBA LRGBA where
+  (+.) (LRGBA r g b a) (LRGBA x y z w) = LRGBA (r+x) (g+y) (b+z) (a+w)
+
+instance Multiplicable Double LRGBA LRGBA where
+  (*.) x (LRGBA r g b a) = LRGBA (x*r) (x*g) (x*b) (x*a)
+
+icPix :: Pixel -> Integer -> Region -> Double
+icPix pix s r = implicitCurvePix pix s s r
+
+implicitCurvePix :: Pixel -> Integer -> Integer -> Region -> Double
+implicitCurvePix pix nv nh r = 
   let 
-    t = antialiasPixelIntensity c w h nv nh r
+    t = antialiasPixelIntensity pix nv nh r
   in
     (-4)*t*(t-1)
 
-aaPix :: Point -> Double -> Integer -> Region -> Double
-aaPix c w s r = antialiasPixelIntensity c w w s s r
 
-antialiasPixelIntensity :: Point -> Double -> Double -> Integer -> Integer -> Region -> Double
-antialiasPixelIntensity center pixelWidth pixelHeight numSamplesV numSamplesH region =
+
+aaPix :: Pixel -> Integer -> Region -> Double
+aaPix pix s r = antialiasPixelIntensity pix s s r
+
+antialiasPixelIntensity :: Pixel -> Integer -> Integer -> Region -> Double
+antialiasPixelIntensity pix numSamplesV numSamplesH region =
   let
-    (sx,sy) = (center -. (1/2 :: Double)*.(ptFromPair (pixelWidth, pixelHeight)))^.vecAsPair
+    (sx,sy) = pix^.corner.ptAsPair
+    (pixWidth,pixHeight) = pix^.dimensions.vecAsPair
     nv = numSamplesV-1
     nh = numSamplesH-1
-    dx = pixelWidth/fromIntegral nh
-    dy = pixelWidth/fromIntegral nv
+    dx = pixWidth/fromIntegral nh
+    dy = pixHeight/fromIntegral nv
     testpts = [ ptFromPair (sx+(fromIntegral i)*dx,sy+(fromIntegral j)*dy) | i <- [0..nh], j <- [0..nv]]
   in
-    (/(fromIntegral $ numSamplesV*numSamplesH)) 
+    (/(fromIntegral $ numSamplesV*numSamplesH))
       . fromIntegral 
       . length 
       . filter (region^.inside)
       $ testpts
 
+multisampleAntialiaser :: Integer -> Integer -> Antialiaser
+multisampleAntialiaser numSamplesV numSamplesH fill pix =
+  let
+    (sx,sy) = pix^.corner.ptAsPair
+    (pixWidth,pixHeight) = pix^.dimensions.vecAsPair
+    nv = numSamplesV-1
+    nh = numSamplesH-1
+    dx = pixWidth/fromIntegral nh
+    dy = pixHeight/fromIntegral nv
+    testpts = [ ptFromPair (sx+(fromIntegral i)*dx,sy+(fromIntegral j)*dy) | i <- [0..nh], j <- [0..nv]]
+  in
+    ((1/(fromIntegral $ numSamplesV*numSamplesH) :: Double) *.)
+      . foldr (+.) invisible  
+      . mapMaybe fill
+      $ testpts
+
+msaa :: Integer -> Antialiaser
+msaa n = multisampleAntialiaser n n
 
 -- takes postmultipliedAlpha
 makeLRGBA :: Double -> Double -> Double -> Double -> LRGBA
@@ -54,8 +86,18 @@ makeLRGBA r g b a = LRGBA (r*a) (g*a) (b*a) a
 type Fill = Point -> Maybe LRGBA
 
 solidFill :: LRGBA -> Fill
-solidFill = const
+solidFill c _ = Just c
 
+filledRegion :: Fill -> Region -> Fill
+filledRegion f r pt = if (r^.inside) pt then f pt else Nothing
+
+type Pixel = Box
+
+type Renderer = Pixel -> LRGBA
+
+type Antialiaser = Fill -> Renderer
+
+--type PixelRenderer :: 
 
 
 {-
@@ -106,47 +148,7 @@ instance Drawable (SolidCurve r c f) where
 -}
       
 
-{-
-data DrawBox :: * where
-  DrawBox :: (Drawable d) => DrawData d -> d -> DrawBox
 
-instance Drawable DrawBox where
-  type DrawData DrawBox = ()
-  getPixel () (DrawBox dat d) = getPixel dat d
-
-instance Drawable [DrawBox] where
-  type DrawData [DrawBox] = ()
-  getPixel () [] _ _ _ = Nothing
-  getPixel () (d:ds) pw ph pllc = case getPixel () d pw ph pllc of 
-    Just x ->
-      Just x
-    Nothing ->
-      getPixel () ds pw ph pllc
--}
-
-data Pixel = Pixel
-  { pixelWidth :: Double
-  , pixelHeight :: Double
-  , pixelllc :: Point
-  }
-
-pixelLeft :: Pixel -> Double
-pixelLeft px = px^.to pixelllc.x
-
-pixelRight :: Pixel -> Double
-pixelRight px = px^.to pixelllc.x + px^.to pixelWidth
-
-type Drawable = Pixel -> Maybe LRGBA
-
-{-
-class Drawable d where
-  type DrawData d :: *
-  -- getPixel pixWidth pixHeight pixLowerLeftCorner Maybe color
-  getPixel :: DrawData d -> d -> Double -> Double -> Point -> Maybe LRGBA
-
-getPixelNull :: (Drawable d, DrawData d ~ ()) => d -> Double -> Double -> Point -> Maybe LRGBA
-getPixelNull = getPixel ()
--}
 
 
 

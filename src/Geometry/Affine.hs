@@ -219,3 +219,13 @@ buildPolygon ps isConvex =
       else
         Nothing
 
+makeBoxSides :: Double -> Double -> Double -> Double -> Box
+makeBoxSides lx mx ly my =
+  let
+    llc = (lx,ly)^.from ptAsPair
+    urc = (mx,my)^.from ptAsPair
+  in
+    makeBoxCorners llc urc
+
+makeBoxCorners :: Point -> Point -> Box
+makeBoxCorners llc urc = makeBox llc (urc-.llc)

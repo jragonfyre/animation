@@ -14,7 +14,7 @@ import Geometry.Affine
 import Geometry.PolyLine
 
 import Data.Array
-import Data.Maybe (maybe,fromMaybe)
+import Data.Maybe (maybe,fromMaybe, fromJust)
 
 import Control.Lens
 
@@ -23,13 +23,14 @@ import Utils
 
 data Curve = Curve
   { _curveParam :: Parametrization -- should start at 0 end at 1
+  , _curvePolyLine :: PolyLine -- a polyline approximation to the curve
+  , _curveBoundingBox :: Box
   , curveImplicit :: Maybe Implicitization
   -- implicit is used to detect what side of the curve a pixel falls on
   -- can be used instead of distance to gauge distance from the curve
   -- also useful to bound the region which contains the curve to make coloring the curve more efficient
   -- determining the side the point falls on is also important for more efficiently determining whether a point
   -- is inside. (More efficient than the winding number I think, tho it should be about the same?)
-  , _curvePolyLine :: PolyLine -- a polyline approximation to the curve
   , curveDistance :: Maybe (Point -> Double)
   , curveWinding :: Maybe (Point -> Double)
   , curveClosed :: Maybe ClosedCurve
@@ -106,6 +107,17 @@ polyLineParametrization pl t =
   in
     line (arr!ix) (arr!(ix+1)) t'
 
+polyLineBoundingBox :: PolyLine -> Box
+polyLineBoundingBox pl = 
+  let
+    lx = fromJust $ minimumOf (points.x) pl
+    mx = fromJust $ maximumOf (points.x) pl
+    ly = fromJust $ minimumOf (points.y) pl
+    my = fromJust $ maximumOf (points.y) pl
+  in
+    makeBoxSides lx mx ly my 
+
+
 polyLineCurve :: PolyLine -> Curve
 polyLineCurve pl = buildCurveWithApproximation (polyLineParametrization pl) pl
 
@@ -113,20 +125,21 @@ polygonCCurve :: Polygon -> ClosedCurve
 polygonCCurve poly = buildClosedCurveWithApproximation (poly^.boundary.to polyLineParametrization) poly
 
 makeCurve 
-  :: Parametrization -> PolyLine -> Maybe Implicitization -> 
+  :: Parametrization -> PolyLine -> Box -> Maybe Implicitization -> 
       Maybe (Point -> Double) -> Maybe (Point -> Double) -> Curve
-makeCurve param pl imp dist wind = 
+makeCurve param pl box imp dist wind = 
     Curve
       { _curveParam = param
-      , curveImplicit = imp
       , _curvePolyLine = pl
+      , _curveBoundingBox = box
+      , curveImplicit = imp
       , curveDistance = dist
       , curveWinding = wind
       , curveClosed = Nothing
       }
 
 buildCurveWithApproximation :: Parametrization -> PolyLine -> Curve
-buildCurveWithApproximation param pl = makeCurve param pl Nothing Nothing Nothing
+buildCurveWithApproximation param pl = makeCurve param pl (polyLineBoundingBox pl) Nothing Nothing Nothing
 
 {-
 buildCurveAndApproximate :: Parametrization -> [Double] -> Curve
@@ -158,15 +171,16 @@ pointToEachOther oc occ =
 approxWindingNumber :: (Point -> Double) -> (Point -> Integer)
 approxWindingNumber = (round .)
 
-makeClosedCurve :: Parametrization -> Polygon -> Maybe Implicitization -> Maybe (Point -> Double) -> 
+makeClosedCurve :: Parametrization -> Polygon -> Box -> Maybe Implicitization -> Maybe (Point -> Double) -> 
   Maybe (Point -> Double) -> Maybe (Point -> Integer) -> Maybe (Point -> Bool) ->
   ClosedCurve
-makeClosedCurve param poly imp dist wind windNum insCurve =
+makeClosedCurve param poly box imp dist wind windNum insCurve =
   let
     c = Curve
       { _curveParam = param
-      , curveImplicit = imp
       , _curvePolyLine = poly^.boundary
+      , _curveBoundingBox = box
+      , curveImplicit = imp
       , curveDistance = dist
       , curveWinding = wind
       , curveClosed = Just cc
@@ -182,7 +196,7 @@ makeClosedCurve param poly imp dist wind windNum insCurve =
 
 buildClosedCurveWithApproximation :: Parametrization -> Polygon -> ClosedCurve
 buildClosedCurveWithApproximation param poly = 
-  makeClosedCurve param poly Nothing Nothing Nothing Nothing Nothing
+  makeClosedCurve param poly (poly^.boundary.to polyLineBoundingBox) Nothing Nothing Nothing Nothing Nothing
 
 makeLensesWith onlyGetters ''Curve
 makeLensesWith onlyGetters ''ClosedCurve

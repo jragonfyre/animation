@@ -29,10 +29,13 @@ segmentCurve seg =
   let 
     st = seg^.start
     ed = seg^.end
+    pl = (makePolyLine [st,ed])
+    bb = polyLineBoundingBox pl
   in
     makeCurve
       (line st ed)
-      (makePolyLine [st,ed])
+      pl
+      bb
       (Just $ \pt ->
         let
           (n,d)=segmentToLine seg
@@ -61,10 +64,14 @@ circleCCurve d circ =
   let
     param = circleParametrization circ
     imp = circleImplicitization circ
+    r = circ^.radius
+    rrvec = (r,r)^.from vecAsPair
+    bbllc = circ^.center -. rrvec
   in
     makeClosedCurve
       param
       (approximateCC param evenApproximator d)
+      (makeBox bbllc ((2::Double)*.rrvec))
       (Just imp)
       (Just $ abs . imp)
       (Just $ \pt -> if imp pt <= 0 then 1 else 0)

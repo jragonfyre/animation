@@ -10,7 +10,7 @@ module Geometry.Types where
   --) where
 
 import Data.Array (Array)
-import GHC.Generics
+import GHC.Generics (Generic)
 
 -- Lens imports
 import Control.Lens
@@ -173,6 +173,9 @@ plAsPoints = iso plToPoints makePolyLine
 plAsArray :: Iso' PolyLine (Array Integer Point)
 plAsArray = iso plToArray plFromArray
 
+points :: Fold PolyLine Point
+points = folding plToArray
+
 segments :: Fold PolyLine Segment
 segments = folding $ \pl -> 
   let
@@ -260,5 +263,31 @@ type Parametrization = Double -> Point  -- parametrization domain is [0,1]
 type Implicitization = Point -> Double  
 -- should be 0 at curve, and nonzero not at curve, sign should change across curve
 type ApproximationStrategy = Double -> [Double]
+
+data Box = Box
+  { _boxCorner :: Point -- lower left corner
+  , _boxDimensions :: Vector
+  }
+
+
+makeBox :: Point -> Vector -> Box
+makeBox = Box
+
+makeSquare :: Point -> Double -> Box
+makeSquare pt s = makeBox pt ((s,s)^.from vecAsPair)
+
+makeFields ''Box
+
+boxLeft :: Box -> Double
+boxLeft px = px^.corner.x
+
+boxRight :: Box -> Double
+boxRight px = px^.corner.x + px^.dimensions.x
+
+boxBottom :: Box -> Double
+boxBottom px = px^.corner.y
+
+boxTop :: Box -> Double 
+boxTop px = px^.corner.y + px^.dimensions.y
 
 
