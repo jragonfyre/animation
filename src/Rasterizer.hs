@@ -10,6 +10,7 @@ module Rasterizer
   ) where
 
 import Data.Array
+import Data.List (zip4)
 
 import Geometry
 
@@ -21,6 +22,9 @@ import qualified Graphics.Image as I
 import Graphics.Image (RPU,RGB,Image)
 
 type Raster a = Array (Int,Int) a
+
+rasterizeBoundary :: (Int,Int) -> Box -> Region -> Raster Double
+rasterizeBoundary sz box rg = fmap (\t -> 4*t*(1-t)) $ rasterize sz box rg
 
 -- rasterize rasterSize rasterRegion region -> antialiased region intensity
 -- uses only corners even for antialiasing rn. Can be improved to higher quality msaa antialiasing
@@ -53,6 +57,9 @@ rasterize (nx,ny) box region =
           then
             1
           else
+            fromIntegral inCorners/4
+          {- turning off more complicated antialiasing for now, currently having performance issues, so lets 
+           - optimize the rest first, even though complicated antialiasing should now be fairly rare
             let
               corner = cornIxLoc (i,j)
               aaTests =
@@ -72,6 +79,7 @@ rasterize (nx,ny) box region =
                 )
             in
               aaInsides/aaTot
+          -}
   in
     array
       ((0,0),(nx-1,ny-1))
@@ -80,25 +88,46 @@ rasterize (nx,ny) box region =
       , j <- [0..ny-1]
       ]
 
+{-
+screenToAbstract :: (Real a) => (a,a) -> Box -> (a,a) -> (Double,Double)
+screenToAbstract (row,column)
 
-render :: (Int,Int) -> Box -> Region -> Fill -> Raster LRGBA
-render sz@(nx,ny) box reg fill = 
+abstractToScreen :: (Double,Double) -> (Double,Double)
+
+pixelAlignedBoundingBox :: (Int,Int) -> Box -> Box -> Box
+pixelAlignedBoundingBox (nx,ny) bigBox boundBox = 
   let
     (width,height) = box^.dimensions.vecAsPair
-    (lx,ly) = box^.corner.ptAsPair
     pixWidth=width/fromIntegral nx
     pixHeight=height/fromIntegral ny
-    centIxLoc (i,j) = (boxLeft box + (fromIntegral i+0.5)*pixWidth,boxTop box - (fromIntegral j+0.5)*pixHeight)^.from ptAsPair
   in
-    array ((0,0),(nx-1,ny-1)) . fmap (\(ix,s) -> (ix,) . (s*.) . monoidMaybe . fill . centIxLoc $ ix) . assocs $ rasterize sz box reg
+-}
 
-renderLayered :: (Int,Int) -> Box -> [(Region,Fill)] -> Raster LRGBA
-renderLayered sz@(nx,ny) box layers = 
-  let 
-    renderedLayers = map (uncurry (render sz box)) layers
-    compositedPix ix = mconcat $ map (!ix) renderedLayers
+type Rasterizer = (Int,Int) -> Box -> Region -> Raster Double
+
+background :: (Int,Int) -> Raster LRGBA
+background (nx,ny) = array ((0,0),(nx-1,ny-1)) [((i,j),invisible) | i <- [0..nx-1], j <- [0..ny-1]]
+
+type Compositor = LRGBA -> LRGBA -> LRGBA
+
+render :: Raster LRGBA -> Compositor -> (Int,Int) -> Box -> Region -> Fill -> Rasterizer -> Raster LRGBA
+render bg comp sz@(nx,ny) box reg fill rasterizer = 
+  let
+    (width,height) = box^.dimensions.vecAsPair
+    pixWidth=width/fromIntegral nx
+    pixHeight=height/fromIntegral ny
+    centIxLoc (i,j) = 
+      (boxLeft box + (fromIntegral i+0.5)*pixWidth,boxTop box - (fromIntegral j+0.5)*pixHeight)^.from ptAsPair
   in
-    array ((0,0),(nx-1,ny-1)) [ ((i,j), compositedPix (i,j)) | i <- [0..nx-1], j <- [0..ny-1]]
+    accum (flip comp) bg . fmap (\(ix,s) -> (ix,) . (s*.) . monoidMaybe . fill . centIxLoc $ ix) . assocs $ rasterizer sz box reg
+
+renderLayered :: (Int,Int) -> Box -> [(Region,Fill,Rasterizer,Compositor)] -> Raster LRGBA
+renderLayered sz _ [] = background sz
+renderLayered sz box ((reg,fill,rast,comp):lls) = 
+  let 
+    lflat = renderLayered sz box lls 
+  in
+    render lflat comp sz box reg fill rast 
 
 toPixel :: LRGBA -> I.Pixel RGB Double
 toPixel (LRGBA r g b _) = I.PixelRGB r g b
@@ -118,9 +147,15 @@ defaultBox = makeBoxSides (-1) 1 (-1) 1
 red = solidFill $ LRGBA 0.5 0 0 0.5
 green = solidFill $ LRGBA 0 0.5 0 0.5
 blue = solidFill $ LRGBA 0 0 0.5 0.5
+orange = solidFill $ LRGBA 0.5 0.3 0 0.5
+purple = solidFill $ LRGBA 0.5 0 0.5 0.5
+grey = solidFill $ LRGBA 0.3 0.3 0.3 0.5
 circ1 = ((-0.3,0.3)^.from ptAsPair,0.7)^.from circAsPair
 circ2 = ((-0.3,-0.3)^.from ptAsPair,0.7)^.from circAsPair
 circ3 = ((0.26,0)^.from ptAsPair,0.7)^.from circAsPair
 
-testLayers :: [(Region,Fill)]
-testLayers = zip (map circleRegion [circ1,circ2,circ3]) [red,green,blue]
+circRegs = (map circleRegion [circ1,circ2,circ3])
+
+testLayers :: [(Region,Fill,Rasterizer,Compositor)]
+testLayers = zip4 (circRegs ++ circRegs) [orange,purple,grey,red,green,blue] 
+  ((replicate 3 rasterizeBoundary) ++ (replicate 3 rasterize)) (replicate 6 (+.))
