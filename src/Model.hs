@@ -20,7 +20,7 @@ monoidMaybe Nothing = mempty
 monoidMaybe (Just m) = m
 
 -- alpha is premultiplied so we can do linear blending (specifically for antialiasing).
-data LRGBA = LRGBA Double Double Double Double
+data LRGBA = LRGBA {-# UNPACK #-} !Double !Double !Double !Double
   deriving (Show, Read, Eq, Ord)
 
 invisible :: LRGBA

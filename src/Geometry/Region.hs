@@ -10,6 +10,8 @@ module Geometry.Region
   , module Geometry.Region.Types
   ) where
 
+import Data.Maybe (fromMaybe)
+
 import Geometry.Types
 
 import Geometry.Curve
@@ -54,7 +56,15 @@ halfPlaneRegion hp =
 convtopeRegion :: ConvexPolytope -> Region
 convtopeRegion conv = makeRegion (\pt -> allOf hplanes (\hp -> (hp^.to halfPlaneRegion . inside) pt) conv)
 
-
+polygonRegion :: Polygon -> Region
+polygonRegion poly =
+  let
+    mcp = poly^.region
+    cc = polygonCCurve poly
+    mbreg = fmap convtopeRegion mcp
+  in 
+    (fromMaybe (makeRegion (cc^.insideCurve)) mbreg)
+    & distanceToBdry .~ (Just (cc^.re _Closed.distance))
 
 {-
 -- distance from a point to a region

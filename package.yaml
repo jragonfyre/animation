@@ -69,6 +69,8 @@ default-extensions:
 - StandaloneDeriving
 - DataKinds
 - TemplateHaskell
+- QuasiQuotes
+- GeneralizedNewtypeDeriving
 #- OverloadedLists
 
 library:
@@ -80,6 +82,7 @@ executables:
     source-dirs:         app
     ghc-options:
     - -threaded
+    - -O2
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:

@@ -27,7 +27,7 @@ import Data.Array (elems, listArray)
 
 --Lens version of Point
 data Point = Point 
-  { _pointX, _pointY :: Double
+  { _pointX, _pointY :: !Double
   }
   deriving (Show, Read, Eq, Ord, Generic)
 
@@ -52,9 +52,10 @@ instance Each Point Point Double Double where
   -- Applicative f => (Double -> f Double) -> Point -> f Point
   each inj Point{_pointX=x,_pointY=y} = Point <$> inj x <*> inj y
 
+
 --Lens version
 data Vector = Vector 
-  { _vectorX, _vectorY :: Double
+  { _vectorX, _vectorY :: !Double
   }
   deriving (Show, Read, Eq, Ord, Generic)
 
@@ -79,8 +80,31 @@ vecAsPair :: (Functor f, Profunctor p) =>
 vecAsPair = iso vecToPair vecFromPair
 
 
+newtype Covector = Covector { _covectorDual :: Vector }
+
+makeCovector :: Double -> Double -> Covector
+makeCovector x y = Covector (makeVector x y)
+
+covecToPair :: Covector -> (Double, Double)
+covecToPair = vecToPair . _covectorDual
+
+covecFromPair :: (Double,Double) -> Covector
+covecFromPair = uncurry makeCovector
+
+makeFields ''Covector
+
+instance Each Covector Covector Double Double where
+  -- each :: Traversal' Vector Double
+  each inj Covector{_covectorDual=Vector{_vectorX=x,_vectorY=y}} = makeCovector <$> inj x <*> inj y
+
+covecAsPair :: Iso' Covector (Double, Double)
+covecAsPair = iso covecToPair covecFromPair
+
+dualize :: Iso' Vector Covector
+dualize = iso Covector _covectorDual
+
 data Matrix = Matrix 
-  { _matrixX, _matrixY :: Vector
+  { _matrixX, _matrixY :: !Vector
   }
   deriving (Show, Read, Eq, Ord, Generic)
 
@@ -93,21 +117,33 @@ matToPair Matrix{_matrixX=x,_matrixY=y} = (x,y)
 matFromPair :: (Vector,Vector) -> Matrix
 matFromPair = uncurry makeMatrix
 
+-- matAsPair :: Iso' Matrix (Vector, Vector)
+matAsPair :: (Functor f, Profunctor p) => 
+  p (Vector, Vector) (f (Vector, Vector)) -> p Matrix (f Matrix)
+matAsPair = iso matToPair matFromPair
+
+-- pair of columns
+matToComponents :: Matrix -> ((Double, Double), (Double, Double))
+matToComponents mat = mat^.matAsPair & each %~ vecToPair
+
+matFromComponents :: ((Double,Double), (Double, Double)) -> Matrix
+matFromComponents pair = (pair & each %~ vecFromPair)^.from matAsPair
+
+-- matAsPair :: Iso' Matrix (Vector, Vector)
+matAsComponents :: Iso' Matrix ((Double, Double), (Double, Double))
+matAsComponents = iso matToComponents matFromComponents
+
 makeFields ''Matrix
 
 instance Each Matrix Matrix Vector Vector where
   -- each :: Traversal' Vector Double
   each inj Matrix{_matrixX=x,_matrixY=y} = Matrix <$> inj x <*> inj y
 
--- matAsPair :: Iso' Matrix (Vector, Vector)
-matAsPair :: (Functor f, Profunctor p) => 
-  p (Vector, Vector) (f (Vector, Vector)) -> p Matrix (f Matrix)
-matAsPair = iso matToPair matFromPair
 
 
 data Affine = Affine 
-  { _affineLinear :: Matrix
-  , _affineTranslation :: Vector
+  { _affineLinear :: !Matrix
+  , _affineTranslation :: !Vector
   }
   deriving (Show, Read, Eq, Ord, Generic)
 
@@ -130,8 +166,8 @@ affAsPair = iso affToPair affFromPair
 
 -- line segment
 data Segment = Segment
-  { _segmentStart :: Point
-  , _segmentEnd :: Point
+  { _segmentStart :: !Point
+  , _segmentEnd :: !Point
   }
   deriving (Show, Read, Eq, Ord, Generic)
 
@@ -173,8 +209,9 @@ plAsPoints = iso plToPoints makePolyLine
 plAsArray :: Iso' PolyLine (Array Integer Point)
 plAsArray = iso plToArray plFromArray
 
-points :: Fold PolyLine Point
-points = folding plToArray
+-- forall f. Applicative f => (Point -> f Point) -> PolyLine -> f PolyLine
+points :: Traversal' PolyLine Point
+points inj = fmap PolyLine . traverse inj . plToArray
 
 segments :: Fold PolyLine Segment
 segments = folding $ \pl -> 
@@ -187,8 +224,8 @@ segments = folding $ \pl ->
 
 
 data Circle = Circle 
-  { _circleCenter :: Point
-  , _circleRadius :: Double
+  { _circleCenter :: !Point
+  , _circleRadius :: !Double
   }
   deriving (Show, Read, Eq, Ord, Generic)
 
@@ -206,10 +243,36 @@ circFromPair = uncurry makeCircle
 circAsPair :: Iso' Circle (Point, Double)
 circAsPair = iso circToPair circFromPair
 
+data Conic = Conic
+  { _conicCenter :: !Point
+  , _conicMatrix :: !Matrix
+  --, _conicThreshold :: !Double -- might give more accurate close to degenerate conics. do I need close to degenerate conics
+  }
+
+makeConic :: Point -> Matrix -> Conic
+makeConic = Conic
+
+makeFields ''Conic
+
+conicToPair :: Conic -> (Point, Matrix)
+conicToPair c = (c ^. center, c ^. matrix)
+
+conicFromPair :: (Point,Matrix) -> Conic
+conicFromPair = uncurry makeConic
+
+conicAsPair :: Iso' Conic (Point, Matrix)
+conicAsPair = iso conicToPair conicFromPair
+
+{-
+discriminant :: Conic -> Double 
+discriminant
+
+_Circle :: Prism' Conic Circle
+-}
 
 data HalfPlane = HalfPlane
-  { _halfPlaneNormal :: Vector
-  , _halfPlaneRadius :: Double
+  { _halfPlaneNormal :: !Vector
+  , _halfPlaneRadius :: !Double
   }
   deriving (Show, Read, Eq, Ord, Generic)
 
@@ -240,14 +303,15 @@ convtopeToHPlanes (ConvexPolytope hps) = hps
 convtopeAsHPlanes :: Iso' ConvexPolytope [HalfPlane]
 convtopeAsHPlanes = iso convtopeToHPlanes makeConvexPolytope
 
-hplanes :: Fold ConvexPolytope HalfPlane
-hplanes = folding convtopeToHPlanes
+-- forall f. Applicative f => (HalfPlane -> f HalfPlane) -> ConvexPolytope -> f ConvexPolytope
+hplanes :: Traversal' ConvexPolytope HalfPlane
+hplanes inj = fmap makeConvexPolytope . traverse inj . convtopeToHPlanes
 
 -- closed polygon
 -- is a polyline whose first and last points are the same
 data Polygon = Polygon 
-  { _polygonBoundary :: PolyLine 
-  , _polygonRegion :: Maybe ConvexPolytope
+  { _polygonBoundary :: !PolyLine 
+  , _polygonRegion :: !(Maybe ConvexPolytope)
   }
   deriving (Show, Read, Eq, Ord, Generic)
 
@@ -265,8 +329,8 @@ type Implicitization = Point -> Double
 type ApproximationStrategy = Double -> [Double]
 
 data Box = Box
-  { _boxCorner :: Point -- lower left corner
-  , _boxDimensions :: Vector
+  { _boxCorner :: !Point -- lower left corner
+  , _boxDimensions :: !Vector
   }
   deriving (Show, Read, Eq, Ord, Generic)
 

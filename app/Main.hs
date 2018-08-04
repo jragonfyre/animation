@@ -10,6 +10,8 @@ import Control.Lens.Iso (under,from)
 
 import Geometry.Region.Types
 
+import Rasterizer
+
 regularPolygon :: Integer -> Double -> Polygon
 regularPolygon n s = flip buildPolygon True . map (\i -> 
   let
@@ -33,8 +35,8 @@ toPoint :: Double -> Double -> (Int,Int) -> Point
 toPoint regionSize hdimen (i,j) =
   (regionSize/2/hdimen) *. ptFromPair (fromIntegral j-hdimen, hdimen-fromIntegral i)
 
-rotate :: Double -> Point -> Point
-rotate theta = under (from ptAsPair) (\(x,y) -> (x*cos theta - y*sin theta, x*sin theta + y * cos theta))
+--rotate :: Double -> Point -> Point
+--rotate theta = under (from ptAsPair) (\(x,y) -> (x*cos theta - y*sin theta, x*sin theta + y * cos theta))
 
 func :: Point -> Double 
 func pt =
@@ -64,7 +66,8 @@ curveImage tol f dimen regionSize pixScale t r =
   in
     I.makeImageR I.RPU dimens (\(i,j) -> 
       let 
-        pt = rotate (r) (toPoint regionSize hdimen (i,j))
+        rot = rotate r
+        pt = rot *. (toPoint regionSize hdimen (i,j))
         pix = I.PixelRGB ((cos t)^2) ((sin t)^2) (0.5+cos t * sin t)
         s = icPix (makeSquare pt (pixWidth*pixScale)) 6 region
       in
@@ -75,8 +78,6 @@ curveImage tol f dimen regionSize pixScale t r =
           I.PixelRGB 0 0 0
     )
 
-toPixel :: LRGBA -> I.Pixel RGB Double
-toPixel (LRGBA r g b _) = I.PixelRGB r g b
 
 regionImage :: Double -> (Double -> Point -> Double) -> Int -> Double -> Double -> Double -> Image RPU RGB Double
 regionImage tol f dimen regionSize t r = 
@@ -95,7 +96,8 @@ regionImage tol f dimen regionSize t r =
   in
     I.makeImageR I.RPU dimens (\(i,j) -> 
       let 
-        pt = rotate (r) (toPoint regionSize hdimen (i,j))
+        rot = rotate r 
+        pt = rot *. (toPoint regionSize hdimen (i,j))
         pix = I.PixelRGB ((cos t)^2) ((sin t)^2) (0.5+cos t * sin t)
         --d = distance 0.0 heptagon pt
         aaPix = toPixel $ renderer (makeSquare pt pixWidth)
@@ -123,7 +125,8 @@ aaHeptagonImage dimen t =
   in
     I.makeImageR I.RPU dimens (\(i,j) -> 
       let 
-        pt = rotate (2*t) (toPoint 2.1 hdimen (i,j))
+        rot = rotate (2*t)
+        pt = rot *. (toPoint 2.1 hdimen (i,j))
         pix = I.PixelRGB ((cos t)^2) ((sin t)^2) (0.5+cos t * sin t)
         --d = distance 0.0 heptagon pt
         s = aaPix (makeSquare pt pixWidth) 6 (heptagon^.to polygonCCurve.to closedCurveRegion)
@@ -147,7 +150,8 @@ heptagonImage dimen t =
   in
     I.makeImageR I.RPU dimens (\(i,j) -> 
       let 
-        pt = rotate (2*t) (toPoint 2.1 hdimen (i,j))
+        rot = rotate (2*t)
+        pt = rot *. (toPoint 2.1 hdimen (i,j))
         pix = I.PixelRGB ((cos t)^2) ((sin t)^2) (0.5+cos t * sin t)
         d = (heptagon^.to polygonCCurve.re _Closed.distance) pt
         s = quadraticFalloff (d/0.03)
@@ -159,13 +163,34 @@ heptagonImage dimen t =
           fmap (s*) pix 
     )
 
+newHeptImage :: Int -> Int -> Double -> Image RPU RGB Double
+newHeptImage width height t = 
+  let
+    origin = (0,0)^.from ptAsPair
+    ar = (fromIntegral width)/(fromIntegral height) :: Double
+    box = makeBoxCenterARHeight origin ar 1.0
+    rot = matrixToAffine $ rotate t
+    rot2 = matrixToAffine $ rotate (-t)
+    heptRegion1 = polygonRegion $ transform rot heptagon
+    r1 = (sin t + 1)/2 
+    g1 = (sin t)^2
+    b1 = (cos t + 1)/2
+    sf1 = solidFill $ LRGBA (r1/2) (g1/2) (b1/2) 0.5
+    sf2 = solidFill $ LRGBA (g1/2) (b1/2) (r1/2) 0.5
+    heptRegion2 = polygonRegion $ transform rot2 heptagon
+    hr1 = Rasterizable heptRegion1 sf1 rasterize mappend
+    hr2 = Rasterizable heptRegion2 sf2 rasterize mappend
+  in
+    convertToImage $ renderLayered (width, height) box [hr1, hr2]
+    
+
 pt1 = makePoint (-0.7) (-0.7)
 pt2 = makePoint 0.7 0.7
 
 seg = makeSegment pt1 pt2
 
-circ1 = makeCircle pt1 0.03
-circ2 = makeCircle pt2 0.03
+circ1m = makeCircle pt1 0.03
+circ2m = makeCircle pt2 0.03
 
 quadraticFalloff = 
   \x -> 1/(1+((2*x)^(4)))
@@ -204,12 +229,13 @@ segmentImage falloff width dimen t =
     I.makeImageR I.RPU dimens (\(i,j) -> 
       let 
         --width = 0.01
-        pt = rotate t (toPoint 2.1 hdimen (i,j))
+        rot = rotate t
+        pt = rot *. (toPoint 2.1 hdimen (i,j))
         pixRed = I.PixelRGB 1 0 0
         pixGreen = I.PixelRGB 0 1 0
         pixBlue = I.PixelRGB 0 0 1
-        d1 = (circ1^.to (circleCurve 0.1).distance) pt
-        d2 = (circ2^.to (circleCurve 0.1).distance) pt
+        d1 = (circ1m^.to (circleCurve 0.1).distance) pt
+        d2 = (circ2m^.to (circleCurve 0.1).distance) pt
         d = (seg^.to segmentCurve.distance) pt
         s = falloff (d/width)
         alpha1 = falloff (d1/0.01)
@@ -217,11 +243,11 @@ segmentImage falloff width dimen t =
         g = (1-alpha1)*(1-alpha2) * s
         pixLine = I.PixelRGB alpha1 g alpha2
       in
-        if (circ1^.to circleRegion.inside) pt 
+        if (circ1m^.to circleRegion.inside) pt 
         then
           pixRed
         else
-          if (circ2^.to circleRegion.inside) pt
+          if (circ2m^.to circleRegion.inside) pt
           then
             pixBlue
           else
@@ -268,9 +294,19 @@ writeHepts nframes size = void $ do
       )
       [0..nframes-1]
 
+writeNewHepts :: Int -> Int -> Int -> IO ()
+writeNewHepts nframes width height = void $ do
+    sequence_ $ map (\n ->
+        I.writeImage
+          ("img/new-hept-"++(show n)++".png")
+          (newHeptImage width height (pi / 600 * fromIntegral n))
+      )
+      [0..nframes-1]
+
 writeSegs :: Double -> Int -> Int -> IO ()
 writeSegs width nframes size = void $ do
-    sequence_ $ map (\(n,fname,falloff) ->
+    sequence_ $ map (\(n,fname,falloff) -> do
+        putStrLn $ "frame " ++ (show n)
         I.writeImage
           ("img/segt-"++fname ++"-"++(show n)++".png")
           (segmentImage falloff width size (0.02 * fromIntegral n))
@@ -279,6 +315,8 @@ writeSegs width nframes size = void $ do
 
 main :: IO ()
 main = do
-  writeHepts 200 200
+  I.writeImage "img/circTest-main.png" $ 
+    convertToImage . renderLayered (500,500) defaultBox $ testLayers
+  writeNewHepts 200 500 500
   --writeSegs 0.01 200 200
 
