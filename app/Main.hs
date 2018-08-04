@@ -296,7 +296,8 @@ writeHepts nframes size = void $ do
 
 writeNewHepts :: Int -> Int -> Int -> IO ()
 writeNewHepts nframes width height = void $ do
-    sequence_ $ map (\n ->
+    sequence_ $ map (\n -> do
+        putStrLn $ "frame " ++ (show n)
         I.writeImage
           ("img/new-hept-"++(show n)++".png")
           (newHeptImage width height (pi / 600 * fromIntegral n))
@@ -317,6 +318,6 @@ main :: IO ()
 main = do
   I.writeImage "img/circTest-main.png" $ 
     convertToImage . renderLayered (500,500) defaultBox $ testLayers
-  writeNewHepts 200 500 500
+  writeNewHepts 200 1000 1000
   --writeSegs 0.01 200 200
 

@@ -234,8 +234,9 @@ invertMatrix :: Matrix -> Matrix
 invertMatrix mat = 
   let 
     ((a,c),(b,d)) = mat^.matAsComponents
+    det = a*d-b*c
   in
-    (1/d) *. (((d,-b),(-c,a))^.from matAsComponents)
+    (1/det) *. (((d,-c),(-b,a))^.from matAsComponents)
 
 invertAffine :: Affine -> Affine
 invertAffine aff = 
