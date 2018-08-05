@@ -16,6 +16,7 @@ module Geometry
   , module Geometry.Affine
   , module Geometry.PolyLine
   , module Geometry.Bezier
+  , module Geometry.Path
   ) where
 
 import Data.Array 
@@ -26,6 +27,8 @@ import Geometry.Curve
 import Geometry.Curve.Types
 import Geometry.Region
 import Geometry.Region.Types
+
+import Geometry.Path
 
 import Geometry.Affine
 import Geometry.PolyLine

@@ -10,6 +10,8 @@ module Geometry.Affine where
 import Geometry.Types
 import Control.Lens (over, (&), (^.), (%~), from, each, (^..), (*~), (+~), (-~), allOf)
 
+import Utils
+
 class Summable a b c | a b -> c where
   infixl 6 +.
   (+.) :: a -> b -> c
@@ -282,6 +284,8 @@ segmentDistance seg pt =
       else
         abs (n `dot` pt')
 
+
+
 pointToAngle :: Point -> Double
 pointToAngle pt
   | pt^.y > 0 = acos (pt^.x)
@@ -371,6 +375,29 @@ makeBoxCenter cent width height =
 
 makeBoxCenterARHeight :: Point -> Double -> Double -> Box
 makeBoxCenterARHeight c ar h = makeBoxCenter c (ar*h) h
+
+convexBoundingBox :: [Point] -> Box
+convexBoundingBox pts = 
+  let
+    (lx,mx) = minMaxOf $ map (^.x) pts
+    (ly,my) = minMaxOf $ map (^.y) pts
+  in
+    makeBoxSides lx mx ly my
+
+polyLineBoundingBox :: PolyLine -> Box
+polyLineBoundingBox = convexBoundingBox . (^..points)
+
+polygonBoundingBox :: Polygon -> Box
+polygonBoundingBox = convexBoundingBox . (^..boundary.points)
+
+segmentBoundingBox :: Segment -> Box
+segmentBoundingBox = convexBoundingBox . (^.. each)
+
+withinY :: Box -> Double -> Bool
+withinY bx y = (boxBottom bx) <= y && y <= (boxTop bx)
+
+withinX :: Box -> Double -> Bool
+withinY bx x = (boxLeft bx) <= x && x <= (boxRight bx)
 
 rotate :: Double -> Matrix
 rotate theta =

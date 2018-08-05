@@ -188,6 +188,11 @@ segAsPair :: (Functor f, Profunctor p) =>
 segAsPair = iso segToPair segFromPair
 
 
+instance Each Segment Segment Point Point where
+  -- each :: Traversal' Point Double
+  -- Applicative f => (Double -> f Double) -> Point -> f Point
+  each inj Segment{_segmentStart=s,_segmentEnd=e} = Segment <$> inj s <*> inj e
+
 -- open polygon
 newtype PolyLine = PolyLine (Array Integer Point)
   deriving (Show, Read, Eq, Ord, Generic) 

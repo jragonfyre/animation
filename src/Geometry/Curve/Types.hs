@@ -107,15 +107,6 @@ polyLineParametrization pl t =
   in
     line (arr!ix) (arr!(ix+1)) t'
 
-polyLineBoundingBox :: PolyLine -> Box
-polyLineBoundingBox pl = 
-  let
-    lx = fromJust $ minimumOf (points.x) pl
-    mx = fromJust $ maximumOf (points.x) pl
-    ly = fromJust $ minimumOf (points.y) pl
-    my = fromJust $ maximumOf (points.y) pl
-  in
-    makeBoxSides lx mx ly my 
 
 
 polyLineCurve :: PolyLine -> Curve
