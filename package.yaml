@@ -33,6 +33,8 @@ dependencies:
 - repa
 - data-default
 - lens
+- vector-algorithms
+- deepseq
 
 default-extensions:
 - LambdaCase

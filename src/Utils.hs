@@ -11,6 +11,9 @@ module Utils
 
 import Control.Lens
 import Control.Lens.TH (defaultFieldRules, generateUpdateableOptics)
+import qualified Data.Vector as V
+import qualified Data.Vector.Algorithms.Intro as I
+import Data.Function (on)
 
 onlyGetters = defaultFieldRules & generateUpdateableOptics .~ False
 
@@ -28,3 +31,20 @@ minMaxOf (x:xs) = mmh x x xs
           mmh min y ys
         else
           mmh min max ys
+
+vSortBy :: (a -> a -> Ordering) -> V.Vector a -> V.Vector a
+vSortBy comp vec = V.create $ do
+  mv <- V.thaw vec
+  I.sortBy comp mv
+  return mv
+
+vSortOn :: (Ord b) => (a->b) -> V.Vector a -> V.Vector a
+vSortOn f = vSortBy (compare `on` f)
+
+vSort :: (Ord a) => V.Vector a -> V.Vector a
+vSort = vSortBy compare
+
+indicate :: Bool -> Double
+indicate True = 1
+indicate False = 0
+

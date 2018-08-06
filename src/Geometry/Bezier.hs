@@ -22,11 +22,29 @@ data Bezier2 = Bezier2
   , end2 :: Point
   , xCoeffs2 :: (Double, Double, Double)
   , yCoeffs2 :: (Double, Double, Double)
-  , parametrization2 :: Double -> Point
-  , implicitization2 :: Point -> Double
+  , implicitParams2 :: (Double,Double,Double,Double,Double,Double)
   , boundingBox2 :: Box
   }
+  deriving (Read,Show,Eq,Ord)
 
+parametrization2 :: Bezier2 -> Double -> Point
+parametrization2 bez t =
+  let 
+    (a2,a1,a0) = xCoeffs2 bez
+    (b2,b1,b0) = yCoeffs2 bez
+  in
+    makePoint
+      (t*(t*a2+a1)+a0)
+      (t*(t*b2+b1)+b0)
+
+implicitization2 :: Bezier2 -> Point -> Double
+implicitization2 bez pt =
+  let
+    (a,b,c,d,e,f) = implicitParams2 bez
+    px = pt^.x
+    py = pt^.y
+  in
+    a*px^2 + b*py^2 + c*px*py + d*px + e*py + f
 
 makeBezier2 :: Point -> Point -> Point -> Bezier2
 makeBezier2 sp cp ep =
@@ -37,10 +55,10 @@ makeBezier2 sp cp ep =
     cy = cp^.y
     ex = ep^.x
     ey = ep^.y
-    a1 = sx-cx+ex
-    a2 = -2*sx+cx
-    b1 = sy-cy+ey
-    b2 = -2*sy+cy
+    a1 = sx-2*cx+ex
+    a2 = -2*sx+2*cx
+    b1 = sy-2*cy+ey
+    b2 = -2*sy+2*cy
     a = sy^2-4*sy*cy + 2*sy*ey + 4*cy^2 - 4*cy*ey + ey^2
     b = sx^2-4*sx*cx + 2*sx*ex + 4*cx^2 - 4*cx*ex + ex^2
     c = -2*sx*sy+4*sx*cy-2*sx*ey+4*cx*sy-8*cx*cy + 4*cx*ey-2*ex*sy + 4 * ex*cy -2*ex*ey
@@ -58,16 +76,7 @@ makeBezier2 sp cp ep =
       , end2=ep
       , xCoeffs2 = (a1,a2,sx)
       , yCoeffs2 = (b1,b2,sy)
-      , parametrization2 = \t -> 
-          makePoint
-            (t*(t*a1+a2)+sx)
-            (t*(t*b1+b2)+sy)
-      , implicitization2 = \pt -> 
-          let
-            px=pt^.x
-            py=pt^.y
-          in
-            a*px^2 + b*py^2 + c*px*py + d*px + e*py + f
+      , implicitParams2 = (a,b,c,d,e,f)
       , boundingBox2 = makeBoxSides lx mx ly my
       }
 
@@ -78,10 +87,10 @@ data Bezier3 = Bezier3
   , end3 :: Point
   , xCoeffs3 :: (Double,Double,Double,Double)
   , yCoeffs3 :: (Double,Double,Double,Double)
-  , parametrization3 :: Double -> Point
   --, implicitization3 :: Point -> Double
   , boundingBox3 :: Box
   }
+  deriving (Read, Show, Eq, Ord)
 
 makeBezier3 :: Point -> Point -> Point -> Point -> Bezier3
 makeBezier3 sp cp1 cp2 ep =
@@ -94,13 +103,13 @@ makeBezier3 sp cp1 cp2 ep =
     dy = cp2^.y
     ex = ep^.x
     ey = ep^.y
-    a3 = -sx+cx-dx+ex
-    a2 = 3*sx-2*cx+dx
-    a1 = -3*sx+cx
+    a3 = -sx+3*cx-3*dx+ex
+    a2 = 3*sx-6*cx+3*dx
+    a1 = -3*sx+3*cx
     a0 = sx
-    b3 = -sy+cy-dy+ey
-    b2 = 3*sy-2*cy+dy
-    b1 = -3*sy+cy
+    b3 = -sy+3*cy-3*dy+ey
+    b2 = 3*sy-6*cy+3*dy
+    b1 = -3*sy+3*cy
     b0 = sy
     boundBox = convexBoundingBox [sp,cp1,cp2,ep]
   in
@@ -111,12 +120,18 @@ makeBezier3 sp cp1 cp2 ep =
       , end3=ep
       , xCoeffs3 = (a3,a2,a1,a0)
       , yCoeffs3 = (b3,b2,b1,b0)
-      , parametrization2 = \t -> 
-          makePoint
-            (t*(t*(t*a3+a2)+a1)+a0)
-            (t*(t*(t*b3+b2)+b1)+b0)
-      , boundingBox3 = makeBoxSides lx mx ly my
+      , boundingBox3 = boundBox
       }
+
+parametrization3 :: Bezier3 -> Double -> Point
+parametrization3 bez t =
+  let
+    (a3,a2,a1,a0) = xCoeffs3 bez
+    (b3,b2,b1,b0) = yCoeffs3 bez
+  in
+    makePoint
+      (t*(t*(t*a3+a2)+a1)+a0)
+      (t*(t*(t*b3+b2)+b1)+b0)
 
 bezier2Curve :: Bezier2 -> Double -> Curve
 bezier2Curve bez d = 

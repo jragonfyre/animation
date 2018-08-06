@@ -12,20 +12,33 @@ module Rasterizer
 
 import qualified Data.Array.Repa as R
 import Data.Array.Repa (D, DIM2, Array, (:.) (..), Z(..), fromFunction, ix2, (!), ix1, Source, Structured (..))
+import Data.Array.Repa.Repr.Vector as R
+
+import qualified Data.Vector as V
+
 import Data.List (zipWith4)
+import qualified Data.List as L
 
 import Data.Array.Repa.Stencil
 import Data.Array.Repa.Stencil.Dim2
 
 import Geometry
+import Geometry.PathBuilder (glyphQ)
+
+import Scanner
 
 import Model
 
+import Utils
+
 import Control.Lens ((^.),from,(%~),_1,(&),to)
+
+import Control.DeepSeq (deepseq)
 
 import qualified Graphics.Image as I
 import Graphics.Image (RPU,RGB,Image)
 import Graphics.Image.Interface.Repa (fromRepaArrayP)
+
 
 type Raster r a = Array r DIM2 a
 
@@ -53,8 +66,8 @@ rasterizeCircle (nx,ny) box circ =
     cornxLoc = \(Z:.i) -> boxLeft box + fromIntegral i * pixWidth
     cornyLoc = \j -> boxTop box - fromIntegral j*pixHeight
     ylocInv = \h -> (boxTop box - h)/pixHeight
-    upper = fromFunction (ix1 (nx+1)) $ \ix -> ylocInv $ cy+(signSqrt $ radius^2-(cornxLoc ix-cx)^2)
-    lower = fromFunction (ix1 (nx+1)) $ \ix -> ylocInv $ cy-(signSqrt $ radius^2-(cornxLoc ix-cx)^2)
+    lower = fromFunction (ix1 (nx+1)) $ \ix -> ylocInv $ cy+(signSqrt $ radius^2-(cornxLoc ix-cx)^2)
+    upper = fromFunction (ix1 (nx+1)) $ \ix -> ylocInv $ cy-(signSqrt $ radius^2-(cornxLoc ix-cx)^2)
     corners =
       fromFunction (ix2 (nx+1) (ny+1)) 
         $ \(Z:.i:.j) ->
@@ -80,8 +93,8 @@ rasterizeCircle (nx,ny) box circ =
 --rasterizeConvexPolygon 
 
 {-
-rasterizeConvex :: (Int, Int) -> Box -> Region -> Raster D Double
-rasterizeConvex (nx,ny) box region =
+rasterizeConvex :: (Int, Int) -> Box -> ConvexPolytope -> Raster D Double
+rasterizeConvex (nx,ny) box cp =
   let
     (width,height) = box^.dimensions.vecAsPair
     (lx,ly) = box^.corner.ptAsPair
@@ -110,6 +123,123 @@ rasterizeConvex (nx,ny) box region =
   in
     fromFunction (ix2 nx ny) computeIntensity
 -}
+
+sndOfThree :: (a,b,c) -> b
+sndOfThree (_,x,_) = x
+
+scanRasterBezierTolerance = 10**(-5)
+scanRasterDuplicateTolerance :: Double -> Double
+scanRasterDuplicateTolerance pixWidth = 3*pixWidth
+
+-- assumes sorted on the double
+keepFirst :: Double -> [(Int, (Double,Sign))] -> [(Int, (Double, Sign))]
+keepFirst tol [] = []
+keepFirst tol [x] = [x]
+keepFirst tol ((t1@(i,(x1,s1))):(t2@(j,(x2,s2))):xs) =
+  if i/=j && s1 == s2 && (abs (x1-x2) < tol)
+  then
+    t1:(keepFirst tol xs)
+  else
+    t1:(keepFirst tol (t2:xs))
+
+-- need to switch to accelerate to get a proper speedup :/
+scanRasterizer :: (Int,Int) -> Box -> ClosedPath -> IO (Raster D Double)
+scanRasterizer (nx,ny) box cp =
+  let 
+    bt=boxTop box
+    segs = V.toList $ toWholeSegsCP cp
+    ssegs = V.fromList $ L.sortOn (negate . boxTop . wpSegBoundingBox) segs
+    ssegixs = V.enumFromN 0 (V.length ssegs)
+    segstopy = fmap (boxTop . wpSegBoundingBox) ssegs
+    segsbottomy = fmap (boxBottom . wpSegBoundingBox) ssegs
+    (width,height) = box^.dimensions.vecAsPair
+    (lx,ly) = box^.corner.ptAsPair
+    pixWidth=width/fromIntegral nx
+    pixHeight=height/fromIntegral ny
+    cornxLoc = \i -> boxLeft box + fromIntegral i * pixWidth
+    cornyLoc = \j -> bt - fromIntegral j*pixHeight
+    ylocInv = \h -> (bt - h)/pixHeight
+    relevantSegsUF = \(j,prevCursegs,prevRemsegs) -> 
+      let
+        yv = cornyLoc j
+        (newcsegs,newRemsegs) = V.span (\i -> yv <= (V.!) segstopy i) prevRemsegs
+        newCursegs = V.filter (\i -> yv >= (V.!) segsbottomy i) ((V.++) newcsegs prevCursegs)
+      in
+        if j > ny
+        then
+          Nothing
+        else
+          Just (newCursegs, (j+1,newCursegs,newRemsegs))
+    relSegs = V.unfoldrN (ny+1) relevantSegsUF (0,V.empty,ssegixs)
+    critPts = 
+      V.imap
+        (\j sgixs -> 
+          L.map snd
+            . keepFirst (scanRasterDuplicateTolerance pixWidth)
+            . L.sortOn (fst . snd)
+            . L.concat 
+            . V.toList 
+            $ fmap
+                (\i -> 
+                  fmap (i,)
+                    $ solveWPSegNTF scanRasterBezierTolerance (cornyLoc j) 
+                    $ (V.!) ssegs i
+                )
+                sgixs
+        )
+        relSegs
+    unfoldRow = \(i, cursum, remcrits) -> 
+      case remcrits of
+        [] ->
+          Just (cursum /= 0,(i+1,cursum,[]))
+        _ ->
+          let
+            xv = cornxLoc i
+            (ncrits, rcrits) = L.span (\c -> (fst c) < xv) remcrits
+            newsum = cursum + (sum $ map (signValue . snd) ncrits)
+          in
+            Just (newsum /= 0, (i+1,newsum,rcrits))
+    rows = V.map (\cs -> V.unfoldrN (nx+1) unfoldRow (0,0,cs))  critPts
+    corners =
+      fromFunction (ix2 (nx+1) (ny+1)) 
+        $ \(Z:.i:.j) ->
+            if (V.!) ((V.!) rows j) i
+            then
+              0.25
+            else
+              0
+    --corners :: Array V DIM2 Double
+    --corners = R.computeS $ R.map indicate $ R.fromVector (ix2 (nx+1) (ny+1)) $ V.concat rows
+    vals =
+      mapStencil2 
+        BoundClamp
+        [stencil2| 0 1 1
+                   0 1 1
+                   0 0 0 |]
+        corners
+  in
+    do
+      putStrLn "segs"
+      --putStrLn $ show segs
+      putStrLn "ssegs"
+      putStrLn $ show ssegs
+      putStrLn "ssegixs"
+      putStrLn $ show ssegixs
+      putStrLn "segstopy"
+      putStrLn $ show segstopy
+      putStrLn "segsbottomy"
+      putStrLn $ show segsbottomy
+      putStrLn "relSegsUF"
+      --putStrLn $ show $ relevantSegsUF (0,V.empty,ssegixs)
+      putStrLn "relSegs"
+      putStrLn $ show relSegs
+      putStrLn "critPts"
+      --putStrLn $ show critPts
+      putStrLn "odd crit pts"
+      putStrLn $ show $ V.filter (odd . length) critPts
+      putStrLn "rows"
+      --putStrLn $ show rows
+      return $ R.extract (ix2 0 0) (ix2 nx ny) vals
 
 -- rasterize rasterSize rasterRegion region -> antialiased region intensity
 -- uses only corners even for antialiasing rn. Can be improved to higher quality msaa antialiasing
@@ -204,6 +334,7 @@ pixelAlignedBoundingBox (nx,ny) bigBox boundBox =
 -}
 
 type Rasterizer r t = (Int,Int) -> Box -> r -> Raster t Double
+type MRasterizer r t m = (Int,Int) -> Box -> r -> m (Raster t Double)
 
 background :: (Int,Int) -> Raster D LRGBA
 background (nx,ny) = fromFunction (ix2 nx ny) (const invisible)
@@ -225,8 +356,29 @@ render bg comp sz@(nx,ny) box reg fill rasterizer =
           id
           (\lkup ix -> ((lkup ix)*.) . monoidMaybe . fill . centIxLoc $ ix)
 
+mrender :: (Source r LRGBA, Source t Double, Monad m) =>
+  Raster r LRGBA -> Compositor -> (Int,Int) -> Box -> a -> Fill -> MRasterizer a t m -> m (Raster D LRGBA)
+mrender bg comp sz@(nx,ny) box reg fill rasterizer = 
+  let
+    (width,height) = box^.dimensions.vecAsPair
+    pixWidth=width/fromIntegral nx
+    pixHeight=height/fromIntegral ny
+    centIxLoc (Z:.i:.j) = 
+      (boxLeft box + (fromIntegral i+0.5)*pixWidth,boxTop box - (fromIntegral j+0.5)*pixHeight)^.from ptAsPair
+  in do
+    rast <- rasterizer sz box reg
+    return 
+      $ R.zipWith (flip comp) bg 
+      $ R.traverse
+          rast
+          id
+          (\lkup ix -> ((lkup ix)*.) . monoidMaybe . fill . centIxLoc $ ix)
+
 data Rasterizable t where
   Rasterizable :: a -> Fill -> Rasterizer a t -> Compositor -> Rasterizable t
+
+data MRasterizable t m where
+  MRasterizable :: a -> Fill -> MRasterizer a t m -> Compositor -> MRasterizable t m
 
 delayRasterizer :: (Source t Double) => Rasterizer a t -> Rasterizer a D
 delayRasterizer rsteriz sz bx r = R.delay $ rsteriz sz bx r
@@ -241,6 +393,12 @@ renderLayered sz box ((Rasterizable reg fill rast comp):lls) =
     lflat = renderLayered sz box lls 
   in
     render lflat comp sz box reg fill rast 
+
+mRenderLayered :: (Monad m) => (Int,Int) -> Box -> [MRasterizable D m] -> m (Raster D LRGBA)
+mRenderLayered sz _ [] = return $ background sz
+mRenderLayered sz box ((MRasterizable reg fill rast comp):lls) = do
+  lflat <- mRenderLayered sz box lls 
+  mrender lflat comp sz box reg fill rast 
 
 toPixel :: LRGBA -> I.Pixel RGB Double
 toPixel (LRGBA r g b _) = I.PixelRGB r g b
@@ -258,6 +416,7 @@ green = solidFill $ LRGBA 0 0.5 0 0.5
 blue = solidFill $ LRGBA 0 0 0.5 0.5
 orange = solidFill $ LRGBA 0.5 0.3 0 0.5
 purple = solidFill $ LRGBA 0.5 0 0.5 0.5
+mpurple = solidFill $ LRGBA 0.75 0 0.75 0.75
 grey = solidFill $ LRGBA 0.3 0.3 0.3 0.5
 circ1 = ((-0.3,0.3)^.from ptAsPair,0.7)^.from circAsPair
 circ2 = ((-0.3,-0.3)^.from ptAsPair,0.7)^.from circAsPair
@@ -265,6 +424,9 @@ circ3 = ((0.26,0)^.from ptAsPair,0.7)^.from circAsPair
 
 circs = [circ1, circ2, circ3]
 circRegs = (map circleRegion [circ1,circ2,circ3])
+
+purpleQ :: [MRasterizable D IO]
+purpleQ = [MRasterizable glyphQ mpurple scanRasterizer mappend]
 
 testLayers :: [Rasterizable D]
 testLayers = zipWith4 (Rasterizable) 

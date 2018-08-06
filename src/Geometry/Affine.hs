@@ -397,7 +397,7 @@ withinY :: Box -> Double -> Bool
 withinY bx y = (boxBottom bx) <= y && y <= (boxTop bx)
 
 withinX :: Box -> Double -> Bool
-withinY bx x = (boxLeft bx) <= x && x <= (boxRight bx)
+withinX bx x = (boxLeft bx) <= x && x <= (boxRight bx)
 
 rotate :: Double -> Matrix
 rotate theta =

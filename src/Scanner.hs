@@ -19,6 +19,7 @@ import Control.Lens ((^.), each, (&), (%~))
 
 import Data.Maybe (mapMaybe)
 
+
 data Sign = Plus | Minus 
   deriving (Show, Read, Eq, Ord, Enum)
 
@@ -26,51 +27,91 @@ signOf :: Double -> Sign
 signOf x | x >= 0 = Plus
          | otherwise = Minus
 
-solveWPSeg :: WholePathSegment -> Double -> [(Double,Double,Sign)]
-solveWPSeg (WPathSeg seg) = solveSegment seg
-solveWPSeg (WPathBez2 bez) = solveBezier2 bez
-solveWPSeg (WPathBez3 bez) = solveBezier3 bez
+signValue :: Sign -> Double
+signValue Plus = 1
+signValue Minus = -1
+
+solveWPSeg :: Double -> WholePathSegment -> Double -> [(Double,Double,Sign)]
+solveWPSeg tol (WPathSeg seg) = solveSegment tol seg
+solveWPSeg tol (WPathBez2 bez) = solveBezier2 tol bez
+solveWPSeg tol (WPathBez3 bez) = solveBezier3 tol bez
+
+solveWPSegNTF :: Double -> Double -> WholePathSegment -> [(Double,Sign)]
+solveWPSegNTF tol y s = map (\(_,x,s)->(x,s)) $ solveWPSeg tol s y 
+
+wpSegBoundingBox :: WholePathSegment -> Box
+wpSegBoundingBox (WPathSeg seg) = segmentBoundingBox seg
+wpSegBoundingBox (WPathBez2 bez) = boundingBox2 bez
+wpSegBoundingBox (WPathBez3 bez) = boundingBox3 bez
 
 -- maybe t, x, sign
-solveSegment :: Segment -> Double -> [(Double, Double, Sign)]
-solveSegment seg y = 
+solveSegment :: Double -> Segment -> Double -> [(Double, Double, Sign)]
+solveSegment tol seg y = 
   let
     ((sx,sy),(ex,ey)) = seg^.segAsPair & each %~ (^.ptAsPair)
     d = ey-sy
     t = (y-sy)/d
     x = sx + (ex-sx)*t
   in
-    if 0 <= t && t <= 1
+    if (abs d) < tol
     then
-      [(t,x,signOf d)]
-    else
       []
+    else
+      if (-tol) <= t && t <= 1+tol
+      then
+        [(t,x,signOf d)]
+      else
+        []
 
-solveBezier2 :: Bezier2 -> Double -> [(Double, Double, Sign)]
-solveBezier2 bez y =
+solveBezier2 :: Double -> Bezier2 -> Double -> [(Double, Double, Sign)]
+solveBezier2 tol bez y =
   let
     (b2,b1,b0) = yCoeffs2 bez
-    (bo2,c) = (b1/(2*b2),(b0-y)/b2)
-    d = bo2^2 - c
-    delta = sqrt d
-    ts = if d < 0 then [] else [bo2-delta,bo2+delta]
+    ts = if abs b2 < tol^2 then [(y-b0)/b1] else solveQuadratic (b2,b1,b0-y)
     (a2,a1,a0) = xCoeffs2 bez
     derivy t = 2*t*b2 + b1
+    derivx t = 2*t*a2 + a1
+    computex t = t*(t*a2+a1)+a0
     isValid t = 
-      if 0 <= t && t <= 1
+        --Just (t,t*(t*a2+a1)+a0,signOf (derivy t))
+      if -tol <= t && t <= 1+tol
       then 
-        Just (t,t*(t*a2+a1)+a0,signOf (derivy t))
+        Just (t,computex t,signOf (derivy t))
       else
         Nothing
   in
     if (withinY (boundingBox2 bez) y)
     then 
-      mapMaybe isValid ts
+      case ts of 
+        [] ->
+          []
+        [t1,t2] ->
+          if t1 == t2
+          then
+            let 
+              t = t1
+              dx = derivx t1
+              x = computex t
+              epsilon = tol * dx/(abs dx)
+            in
+              if -tol <= t && t <= 1+tol
+              then
+                case () of 
+                  _ | b2 < 0  -> [(t,x-epsilon,Plus),(t,x+epsilon,Minus)]
+                    | b2 > 0  -> [(t,x-epsilon,Minus),(t,x+epsilon,Plus)]
+                    | b2 == 0 -> []
+              else
+                []
+          else
+            mapMaybe isValid ts 
+            --zip3 ts (map computex ts) (map (signOf . derivy) ts)
+        _ -> 
+          mapMaybe isValid ts
     else
       []
 
-solveBezier3 :: Bezier3 -> Double -> [(Double,Double,Sign)]
-solveBezier3 bez y =
+solveBezier3 :: Double -> Bezier3 -> Double -> [(Double,Double,Sign)]
+solveBezier3 tol bez y =
   let
     (b3,b2,b1,b0) = yCoeffs3 bez
     (a3,a2,a1,a0) = xCoeffs3 bez
@@ -78,7 +119,7 @@ solveBezier3 bez y =
     derivy t = t*(3*t*b3+2*b2)+b1
     paramx t = t*(t*(t*a3+a2)+a1)+a0
     isValid t = 
-      if 0 <= t && t <= 1
+      if -tol <= t && t <= 1+tol
       then 
         Just (t,paramx t,signOf (derivy t))
       else
@@ -151,7 +192,7 @@ solveQuadratic (b2,b1,b0) =
     (bo2,c) = (b1/(2*b2),b0/b2)
     d = bo2^2 - c
     delta = sqrt d
-    ts = if d < 0 then [] else [bo2-delta,bo2+delta]
+    ts = if d < 0 then [] else [-bo2-delta,-bo2+delta]
   in
     ts
 

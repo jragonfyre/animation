@@ -314,10 +314,39 @@ writeSegs width nframes size = void $ do
       )
       [(fr,fname,falloff) | fr <- [0..nframes-1], (fname,falloff) <- falloffFunctions]
 
+qBox = makeBoxSides (-500) 2000 (-400) 1600
+
 main :: IO ()
 main = do
-  I.writeImage "img/circTest-main.png" $ 
-    convertToImage . renderLayered (500,500) defaultBox $ testLayers
-  writeNewHepts 200 1000 1000
+  --I.writeImage "img/circTest-main.png" $ 
+  --  convertToImage . renderLayered (500,500) defaultBox $ testLayers
+  rasterLarge <- mRenderLayered (2500,2000) qBox $ purpleQ
+  rasterMedium <- mRenderLayered (250,200) qBox $ purpleQ
+  rasterSmall <- mRenderLayered (25,20) qBox $ purpleQ
+  rasterXS <- mRenderLayered (10,8) qBox $ purpleQ
+  sequence_ $ map (\(name, raster) -> I.writeImage ("img/q-test-"++name++".png") (convertToImage raster))
+    $ [ ( "large"
+        , rasterLarge
+        )
+      , ( "medium"
+        , rasterMedium
+        )
+      , ( "small"
+        , rasterSmall
+        )
+      , ( "xs"
+        , rasterXS
+        )
+      ]
+      
+  I.writeImage "img/q-test-large.png" $ 
+    convertToImage rasterLarge
+  I.writeImage "img/q-test-large.png" $ 
+    convertToImage rasterLarge
+  I.writeImage "img/q-test-large.png" $ 
+    convertToImage rasterLarge
+  I.writeImage "img/q-test-large.png" $ 
+    convertToImage rasterLarge
+  --writeNewHepts 200 200 200
   --writeSegs 0.01 200 200
 
