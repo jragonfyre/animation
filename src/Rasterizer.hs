@@ -45,6 +45,77 @@ type Raster r a = Array r DIM2 a
 rasterizeBoundary :: (Structured t Double Double) => Rasterizer a t -> Rasterizer a (TR t)
 rasterizeBoundary rasterizer = \sz box a -> R.smap (\t -> 4*t*(1-t)) $ rasterizer sz box a
 
+norm t = exp (-t^2)
+
+{-
+plusDistribution :: V.Vector Double
+plusDistribution = V.fromList $ map ((50*) . norm . (/5)) [0..10]
+
+plusWeight = 4*(V.sum plusDistribution) - 3*((V.!) plusDistribution 0)
+
+plusStencil = makeStencil2 21 21 
+  $ \(Z:.i:.j) -> 
+      if i == 0
+      then
+        Just ((V.!) plusDistribution (abs j))
+      else
+        if j == 0
+        then
+          Just ((V.!) plusDistribution (abs i))
+        else
+          Nothing
+
+plusAntialias :: (Source t Double) => Raster t Double -> Raster D Double 
+plusAntialias raster = 
+  let
+    smoothed = 
+      mapStencil2
+        BoundClamp
+        plusStencil
+        raster
+  in 
+    R.zipWith (\o n -> if 0 < o && o < 1 then n/273 else o) raster smoothed
+-}
+
+-- the Gaussian below has total weight 273
+gaussian1 = 
+  [stencil2| 1  4  7  4 1 
+             4 16 26 16 4
+             7 26 41 26 7
+             4 16 26 16 4
+             1  4  7  4 1 |]
+gaussian1Weight = 273
+
+gaussian2 =
+  [stencil2| 0  0  1   2  1  0 0
+             0  3 13  22 13  3 0
+             1 13 59  97 59 13 1
+             2 22 97 159 97 22 2
+             1 13 59  97 59 13 1
+             0  3 13  22 13  3 0
+             0  0  1   2  1  0 0 |]
+gaussian2Weight = 1003
+
+stencilAntialias :: (Source t Double) => Stencil DIM2 Double -> Double -> Raster t Double -> Raster D Double
+stencilAntialias stencil weight raster = 
+  let
+    smoothed = 
+      mapStencil2
+        BoundClamp
+        stencil
+        raster
+  in 
+    R.zipWith (\o n -> if 0 < o && o < 1 then n/weight else o) raster smoothed
+
+stencilAABlur :: (Source t Double) => Stencil DIM2 Double -> Double -> Raster t Double -> Raster D Double
+stencilAABlur stencil weight raster = R.delay . smap (/weight) $ mapStencil2 BoundClamp stencil raster
+
+gaussian1Antialias :: (Source t Double) => Raster t Double -> Raster D Double
+gaussian1Antialias = stencilAntialias gaussian1 gaussian1Weight
+
+gaussian2Antialias :: (Source t Double) => Raster t Double -> Raster D Double
+gaussian2Antialias = stencilAntialias gaussian2 gaussian2Weight
+
 --gaussianFilter :: Int -> Double -> Array D DIM2 
 
 signSqrt :: Double -> Double
@@ -239,7 +310,7 @@ scanRasterizer (nx,ny) box cp =
       putStrLn $ show $ V.filter (odd . length) critPts
       putStrLn "rows"
       --putStrLn $ show rows
-      return $ R.extract (ix2 0 0) (ix2 nx ny) vals
+      return $ stencilAntialias gaussian1 gaussian1Weight $ R.extract (ix2 0 0) (ix2 nx ny) vals
 
 -- rasterize rasterSize rasterRegion region -> antialiased region intensity
 -- uses only corners even for antialiasing rn. Can be improved to higher quality msaa antialiasing

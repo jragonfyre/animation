@@ -90,10 +90,16 @@ solveBezier2 tol bez y =
           then
             let 
               t = t1
+              ta=t1-2*tol
+              tb=t1+2*tol
               dx = derivx t1
               x = computex t
               epsilon = tol * dx/(abs dx)
+              xa = computex ta
+              xb = computex tb
             in
+              mapMaybe isValid [ta,tb]
+              {-
               if -tol <= t && t <= 1+tol
               then
                 case () of 
@@ -102,6 +108,7 @@ solveBezier2 tol bez y =
                     | b2 == 0 -> []
               else
                 []
+              -}
           else
             mapMaybe isValid ts 
             --zip3 ts (map computex ts) (map (signOf . derivy) ts)
