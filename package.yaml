@@ -35,6 +35,9 @@ dependencies:
 - lens
 - vector-algorithms
 - deepseq
+- bytestring
+- binary
+- FontyFruity
 
 default-extensions:
 - LambdaCase
