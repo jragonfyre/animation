@@ -203,10 +203,10 @@ scanRasterDuplicateTolerance :: Double -> Double
 scanRasterDuplicateTolerance pixWidth = 3*pixWidth
 
 -- assumes sorted on the double
-keepFirst :: Double -> [(Int, (Double,Sign))] -> [(Int, (Double, Sign))]
+keepFirst :: Double -> [(Int, (Double,(Sign,Double)))] -> [(Int, (Double, (Sign,Double)))]
 keepFirst tol [] = []
 keepFirst tol [x] = [x]
-keepFirst tol ((t1@(i,(x1,s1))):(t2@(j,(x2,s2))):xs) =
+keepFirst tol ((t1@(i,(x1,(s1,_)))):(t2@(j,(x2,(s2,_)))):xs) =
   if i/=j && s1 == s2 && (abs (x1-x2) < tol)
   then
     t1:(keepFirst tol xs)
@@ -262,23 +262,26 @@ scanRasterizer (nx,ny) box cp =
     unfoldRow = \(i, cursum, remcrits) -> 
       case remcrits of
         [] ->
-          Just (cursum /= 0,(i+1,cursum,[]))
+          Just (indicate (cursum /= 0),(i+1,cursum,[]))
         _ ->
           let
             xv = cornxLoc i
-            (ncrits, rcrits) = L.span (\c -> (fst c) < xv) remcrits
-            newsum = cursum + (sum $ map (signValue . snd) ncrits)
+            (ncrits, rcrits) = L.span (\c -> (fst c) < xv-pixWidth) remcrits
+            ccrits = L.takeWhile (\c -> (fst c) < xv +pixWidth) rcrits
+            newsum = cursum + (sum $ map (signValue . fst . snd) (ncrits))
+            tsum = newsum + (sum $ map (signValue . fst . snd) (L.takeWhile (\c -> (fst c) < xv) ccrits))
+            d = case ccrits of 
+              [] ->
+                0
+              ((x,(_,xscale)):_) -> 
+                0.5*(exp (-10*((xv-x)*xscale/(pixWidth))^2))
           in
-            Just (newsum /= 0, (i+1,newsum,rcrits))
+            Just (if (tsum == 0) then 0+d else 1-d, (i+1,newsum,rcrits))
     rows = V.map (\cs -> V.unfoldrN (nx+1) unfoldRow (0,0,cs))  critPts
     corners =
       fromFunction (ix2 (nx+1) (ny+1)) 
         $ \(Z:.i:.j) ->
-            if (V.!) ((V.!) rows j) i
-            then
-              0.25
-            else
-              0
+            0.25 * ((V.!) ((V.!) rows j) i)
     --corners :: Array V DIM2 Double
     --corners = R.computeS $ R.map indicate $ R.fromVector (ix2 (nx+1) (ny+1)) $ V.concat rows
     vals =
@@ -310,7 +313,8 @@ scanRasterizer (nx,ny) box cp =
       putStrLn $ show $ V.filter (odd . length) critPts
       putStrLn "rows"
       --putStrLn $ show rows
-      return $ stencilAntialias gaussian1 gaussian1Weight $ R.extract (ix2 0 0) (ix2 nx ny) vals
+      return $ R.extract (ix2 0 0) (ix2 nx ny) vals
+      --return $ stencilAntialias gaussian1 gaussian1Weight $ R.extract (ix2 0 0) (ix2 nx ny) vals
 
 -- rasterize rasterSize rasterRegion region -> antialiased region intensity
 -- uses only corners even for antialiasing rn. Can be improved to higher quality msaa antialiasing

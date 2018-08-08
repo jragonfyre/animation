@@ -36,13 +36,10 @@ solveWPSeg tol (WPathSeg seg) = solveSegment tol seg
 solveWPSeg tol (WPathBez2 bez) = solveBezier2 tol bez
 solveWPSeg tol (WPathBez3 bez) = solveBezier3 tol bez
 
-solveWPSegNTF :: Double -> Double -> WholePathSegment -> [(Double,Sign)]
-solveWPSegNTF tol y s = map (\(_,x,s)->(x,s)) $ solveWPSeg tol s y 
-
-wpSegBoundingBox :: WholePathSegment -> Box
-wpSegBoundingBox (WPathSeg seg) = segmentBoundingBox seg
-wpSegBoundingBox (WPathBez2 bez) = boundingBox2 bez
-wpSegBoundingBox (WPathBez3 bez) = boundingBox3 bez
+-- the second double is the absolute value of the x coordinate of the normal to the curve at the point.
+-- used for antialiasing
+solveWPSegNTF :: Double -> Double -> WholePathSegment -> [(Double,(Sign,Double))]
+solveWPSegNTF tol y seg = map (\(t,xv,s)->(xv,(s,abs ((pathNormal seg t)^.x)))) $ solveWPSeg tol seg y 
 
 -- maybe t, x, sign
 solveSegment :: Double -> Segment -> Double -> [(Double, Double, Sign)]

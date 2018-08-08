@@ -2,6 +2,8 @@ module Main where
 
 import Geometry
 import Model
+import Font
+import Graphics.Text.TrueType (loadFontFile)
 import qualified Graphics.Image as I
 import Graphics.Image (RPU,RGB,Image)
 import Control.Monad (void)
@@ -316,10 +318,88 @@ writeSegs width nframes size = void $ do
 
 qBox = makeBoxSides (-500) 2000 (-400) 1600
 
+-- 
+writeGlyph :: Int -> Font -> Char -> Fill -> IO ()
+writeGlyph height font char fill =
+  let
+    glyph = makeGlyph font char
+    bbox = bounds glyph
+    (w,h) = bbox^.dimensions.vecAsPair
+    width = ceiling $ (w/h) * fromIntegral height
+    nw = h*(fromIntegral width)/(fromIntegral height)
+    asprat = makeVector nw h
+    border = (0.05::Double) *. asprat
+    nbox = makeBox ((bbox^.corner)-.border) ((1.1::Double) *. asprat)
+    gc = glyphPath glyph
+    rendrbl = [MRasterizable gc fill scanRasterizer mappend]
+    cname = case char of 
+      '/' -> "forward-slash"
+      '.' -> "period"
+      ',' -> "comma"
+      ';' -> "semicolon"
+      ':' -> "colon"
+      _ -> [char]
+  in do
+    raster <- mRenderLayered (width,height) nbox rendrbl
+    I.writeImage
+      ("img/char-test-"++cname++"-("++(show width)++","++(show height)++").png")
+      (convertToImage raster)
+
+writeGlyphAnim :: Int -> Int -> Font -> Char -> Fill -> IO ()
+writeGlyphAnim time height font char fill =
+  let
+    glyph = makeGlyph font char
+    tsecs = (fromIntegral time)/30
+    omega = 0.2 -- rotations/sec
+    omegarad = omega*2*pi -- radians/sec
+    rot = matrixToAffine $ rotate (omegarad*tsecs)
+    gc = transform rot $ glyphPath glyph
+    bbox = bounds gc
+    (w,h) = bbox^.dimensions.vecAsPair
+    width = ceiling $ (w/h) * fromIntegral height
+    nw = h*(fromIntegral width)/(fromIntegral height)
+    asprat = makeVector nw h
+    border = (0.05::Double) *. asprat
+    nbox = makeBox ((bbox^.corner)-.border) ((1.1::Double) *. asprat)
+    cname = case char of 
+      '/' -> "forward-slash"
+      '.' -> "period"
+      ',' -> "comma"
+      ';' -> "semicolon"
+      ':' -> "colon"
+      _ -> [char]
+    rendrbl = [MRasterizable gc fill scanRasterizer mappend]
+  in do
+    raster <- mRenderLayered (width,height) nbox rendrbl
+    I.writeImage
+      ("img/char-anim-test-frame-"++(show time)++"-"++cname++"-("++(show width)++","++(show height)++").png")
+      (convertToImage raster)
+    
+
 main :: IO ()
 main = do
+  let purpleFill = (solidFill $ LRGBA 0.5 0.2 0.7 1.0)
+  font <- loadFontFile "../fonts/Caudex/Caudex-Regular.ttf"
+  case font of
+    Left err -> 
+      putStrLn ("Error: "++err)
+    Right ft -> do
+      sequence_ $ map (\char -> 
+        writeGlyph 500 ft char purpleFill)
+        "QqWwEeRr!@#$%^&*(){}[]+=_-\\\"\':;?/.><,SsDdFfGgHhAaZzXxBb"
+      sequence_ $ map (\char -> 
+        writeGlyph 100 ft char purpleFill)
+        "QqWwEeRr!@#$%^&*(){}[]+=_-\\\"\':;?/.><,SsDdFfGgHhAaZzXxBb"
+      sequence_ $ map (\char -> 
+        writeGlyph 20 ft char purpleFill)
+        "QqWwEeRr!@#$%^&*(){}[]+=_-\\\"\':;?/.><,SsDdFfGgHhAaZzXxBb"
+      sequence_ $ map (\t ->
+        writeGlyphAnim t 150 ft 'Q' purpleFill)
+        [1..200]
+
   --I.writeImage "img/circTest-main.png" $ 
   --  convertToImage . renderLayered (500,500) defaultBox $ testLayers
+  {-
   rasterLarge <- mRenderLayered (2500,2000) qBox $ purpleQ
   rasterMedium <- mRenderLayered (250,200) qBox $ purpleQ
   rasterSmall <- mRenderLayered (25,20) qBox $ purpleQ
@@ -347,6 +427,7 @@ main = do
     convertToImage rasterLarge
   I.writeImage "img/q-test-large.png" $ 
     convertToImage rasterLarge
+  -}
   --writeNewHepts 200 200 200
   --writeSegs 0.01 200 200
 

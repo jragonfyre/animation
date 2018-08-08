@@ -12,7 +12,7 @@ import Geometry.Curve.Types
 import Geometry.Region
 import Geometry.Affine
 
-import Control.Lens
+import Control.Lens ((^.), from, (&),(.~))
 
 import Utils
 
@@ -26,6 +26,16 @@ data Bezier2 = Bezier2
   , boundingBox2 :: Box
   }
   deriving (Read,Show,Eq,Ord)
+
+instance GBounded Bezier2 where
+  bounds = boundingBox2
+
+instance Geometric Bezier2 where
+  transform aff Bezier2{start2=s,control2=c,end2=e} =
+    makeBezier2
+      (transform aff s)
+      (transform aff c)
+      (transform aff e)
 
 parametrization2 :: Bezier2 -> Double -> Point
 parametrization2 bez t =
@@ -122,6 +132,17 @@ makeBezier3 sp cp1 cp2 ep =
       , yCoeffs3 = (b3,b2,b1,b0)
       , boundingBox3 = boundBox
       }
+
+instance GBounded Bezier3 where
+  bounds = boundingBox3
+
+instance Geometric Bezier3 where
+  transform aff Bezier3{start3=s,stCont3=c,endCont3=d,end3=e} =
+    makeBezier3
+      (transform aff s)
+      (transform aff c)
+      (transform aff d)
+      (transform aff e)
 
 parametrization3 :: Bezier3 -> Double -> Point
 parametrization3 bez t =

@@ -192,6 +192,9 @@ instance Geometric Polygon where
 line :: Point -> Point -> Double -> Point
 line p1 p2 t = p1 +. t*.(p2-.p1)
 
+segmentParametrization :: Segment -> Double -> Point
+segmentParametrization seg = line (seg^.start) (seg^.end)
+
 -- vector start end
 vector :: Point -> Point -> Vector
 vector = (-.)
@@ -392,6 +395,55 @@ polygonBoundingBox = convexBoundingBox . (^..boundary.points)
 
 segmentBoundingBox :: Segment -> Box
 segmentBoundingBox = convexBoundingBox . (^.. each)
+
+unionBoxes :: [Box] -> Box
+unionBoxes boxes = 
+  let 
+    lx = minimum $ map boxLeft boxes
+    mx = maximum $ map boxRight boxes
+    ly = minimum $ map boxBottom boxes
+    my = maximum $ map boxTop boxes
+  in 
+    makeBoxSides
+      lx
+      mx
+      ly
+      my
+
+intersectionBoxes :: [Box] -> Box
+intersectionBoxes boxes = 
+  let 
+    lx = maximum $ map boxLeft boxes
+    mx = minimum $ map boxRight boxes
+    ly = maximum $ map boxBottom boxes
+    my = minimum $ map boxTop boxes
+  in 
+    makeBoxSides
+      lx
+      mx
+      ly
+      my
+
+instance (GBounded a) => GBounded [a] where
+  bounds = unionBoxes . map bounds
+
+instance GBounded Point where
+  bounds = flip makeBox zero
+
+instance GBounded Segment where
+  bounds = segmentBoundingBox
+
+instance GBounded Polygon where
+  bounds = polygonBoundingBox
+
+instance GBounded PolyLine where
+  bounds = polyLineBoundingBox
+
+instance GBounded Box where
+  bounds = id
+
+instance Geometric Segment where
+  transform aff seg = seg & each %~ (transform aff)
 
 withinY :: Box -> Double -> Bool
 withinY bx y = (boxBottom bx) <= y && y <= (boxTop bx)

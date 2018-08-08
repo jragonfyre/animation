@@ -13,7 +13,8 @@ import Geometry.Types
 import Geometry.Affine
 import Geometry.PolyLine
 
-import Data.Array
+import Data.Array (Array, (!))
+import qualified Data.Array as A
 import Data.Maybe (maybe,fromMaybe, fromJust)
 
 import Control.Lens
@@ -100,7 +101,7 @@ polyLineParametrization :: PolyLine -> Parametrization
 polyLineParametrization pl t = 
   let
     arr = pl^.plAsArray
-    (l,r) = bounds arr
+    (l,r) = A.bounds arr
     ts = t*(fromIntegral (r-l)) -- rescaled to match 0-1 per segment of the polyline
     ix = floor $ ts -- index of beginning of segment
     t' = ts - fromIntegral ix -- index in segment

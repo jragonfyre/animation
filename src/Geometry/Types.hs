@@ -360,4 +360,6 @@ boxBottom px = px^.corner.y
 boxTop :: Box -> Double 
 boxTop px = px^.corner.y + px^.dimensions.y
 
+class GBounded a where
+  bounds :: a -> Box
 
