@@ -17,6 +17,8 @@ import Geometry.Affine
 import qualified Data.Vector as V
 import Data.Vector ((!),imap,Vector)
 
+import Data.Maybe (fromMaybe)
+
 import Control.Lens ((^.))
 --import Data.List.Nonempty
 
@@ -90,49 +92,76 @@ toWholeSeg (PathSeg p1) = WPathSeg . makeSegment p1
 toWholeSeg (PathBez2 s c) = WPathBez2 . makeBezier2 s c
 toWholeSeg (PathBez3 s c d) = WPathBez3 . makeBezier3 s c d
 
-newtype SimpleClosedPath
-  = SCPath { pathSegs :: Vector PathSegment }
+newtype Contour
+  = Contour { contourSegs :: Vector PathSegment }
   deriving (Show, Eq, Ord, Read)
 
-instance GBounded SimpleClosedPath where
-  bounds = bounds . V.toList . toWholeSegsSCP
+instance GBounded Contour where
+  bounds = bounds . V.toList . toWholeSegsC
 
-instance Geometric SimpleClosedPath where
-  transform aff SCPath{pathSegs = ps} = SCPath $ fmap (transform aff) ps
+instance Geometric Contour where
+  transform aff Contour{contourSegs = ps} = Contour $ fmap (transform aff) ps
  
 instance (Functor f, Geometric a) => Geometric (f a) where
   transform aff = fmap (transform aff)
 
-makeSCP :: [PathSegment] -> SimpleClosedPath
-makeSCP = SCPath . V.fromList
+makeContour :: [PathSegment] -> Contour
+makeContour = Contour . V.fromList
 
-newtype OpenPath = OPath { opathSegs :: (Vector PathSegment, Point) }
+newtype Path = Path { pathSegs :: (Vector PathSegment, Point) }
   deriving (Show, Eq, Ord, Read)
 
-numSegsSCP :: SimpleClosedPath -> Int
-numSegsSCP = V.length . pathSegs
+numSegsC :: Contour -> Int
+numSegsC = V.length . contourSegs
 
-numSegsOP :: OpenPath -> Int
-numSegsOP op =
+numSegsP :: Path -> Int
+numSegsP op =
   let
-    (v,_) = opathSegs op
+    (v,_) = pathSegs op
   in
     V.length v
 
 -- isomorphic to nonempty really, maybe should use instead
 -- I'm being lazy here
-type ClosedPath = [SimpleClosedPath]
+type ClosedPath = [Contour]
 
-toWholeSegsSCP :: SimpleClosedPath -> Vector WholePathSegment
-toWholeSegsSCP scp = 
+toWholeSegsC :: Contour -> Vector WholePathSegment
+toWholeSegsC scp = 
   let
-    psegs = pathSegs scp
-    n = numSegsSCP scp
+    psegs = contourSegs scp
+    n = numSegsC scp
   in
     imap (\i pseg -> toWholeSeg pseg (pSegStart (psegs!((i+1) `mod` n)))) psegs
 
 toWholeSegsCP :: ClosedPath -> Vector WholePathSegment
-toWholeSegsCP = V.concat . map toWholeSegsSCP
+toWholeSegsCP = V.concat . map toWholeSegsC
 
---toWholeSegsOP :: OpenPath -> Vector WholePathSegment
+cutContour :: Contour -> Path
+cutContour Contour{contourSegs=cs} = Path (cs, pSegStart $ (cs!0))
+
+-- assumes (without checking) that the start point and end point of the path are the same
+-- joinPathUnsafe . cutContour = id
+joinPathUnsafe :: Path -> Contour
+joinPathUnsafe Path{pathSegs=(ps,_)} = Contour ps
+
+-- uses joinPath, to ensure that the path is joined with a segment when the start and end points are 
+-- not exactly equal, and is simply joined together otherwise, since there's no reason to add a zero length
+-- segment
+joinPathSegment :: Path -> Contour
+joinPathSegment p = fromMaybe (joinPathSegUnsafe p) (joinPath p)
+
+joinPathSegUnsafe :: Path -> Contour
+joinPathSegUnsafe Path{pathSegs=(ps,cap)} = Contour (ps `V.snoc` (PathSeg cap))
+
+-- requires the start and end points to be ***exactly*** equal
+joinPath :: Path -> Maybe Contour
+joinPath Path{pathSegs=(ps,cap)} = 
+  if (pSegStart (ps!0)) == cap
+  then
+    Just $ Contour ps
+  else
+    Nothing
+
+
+--toWholeSegsOP :: Path -> Vector WholePathSegment
 

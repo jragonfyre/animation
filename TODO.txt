@@ -36,4 +36,5 @@
    loader.
 10. Improve Rasterization to only rasterize an object within its bounding box. 
 11. Improve small scale rasterization (i.e. for fonts at low pixel sizes)
-
+12. Implement more operations on paths and contours, e.g. rotation of contours, cutting of contours into
+    open paths, joining of open paths into contours

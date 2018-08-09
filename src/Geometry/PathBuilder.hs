@@ -172,7 +172,7 @@ processHelper _ s _ segs ((T ex ey):cs) =
     e = s+.ev
   in 
     processHelper QBez e c ((PathBez2 s c):segs) cs
-processHelper _ _ _ segs (Z:cs) = (makeSCP (reverse segs)):(process cs)
+processHelper _ _ _ segs (Z:cs) = (makeContour (reverse segs)):(process cs)
 
 -- extracted Caudex Regular glyph for Q in SVG-font format
 -- <glyph glyph-name="Q" unicode="Q" horiz-adv-x="1610" 
