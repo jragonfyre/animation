@@ -345,6 +345,26 @@ writeGlyph height font char fill =
       ("img/char-test-"++cname++"-("++(show width)++","++(show height)++").png")
       (convertToImage raster)
 
+writeString :: Int -> Font -> String -> Fill -> IO ()
+writeString height font str fill =
+  let
+    --glyph = makeGlyph font char
+    spath = stringToPath 300 72 font str
+    bbox = bounds spath
+    (w,h) = bbox^.dimensions.vecAsPair
+    width = ceiling $ (w/h) * fromIntegral height
+    nw = h*(fromIntegral width)/(fromIntegral height)
+    asprat = makeVector nw h
+    border = (0.05::Double) *. asprat
+    nbox = makeBox ((bbox^.corner)-.border) ((1.1::Double) *. asprat)
+    rendrbl = [MRasterizable spath fill scanRasterizer mappend]
+    sname = "\""++str++"\""
+  in do
+    raster <- mRenderLayered (width,height) nbox rendrbl
+    I.writeImage
+      ("img/str-test-"++sname++"-("++(show width)++","++(show height)++").png")
+      (convertToImage raster)
+
 writeGlyphAnim :: Int -> Int -> Font -> Char -> Fill -> IO ()
 writeGlyphAnim time height font char fill =
   let
@@ -384,6 +404,7 @@ main = do
     Left err -> 
       putStrLn ("Error: "++err)
     Right ft -> do
+      {-
       sequence_ $ map (\char -> 
         writeGlyph 500 ft char purpleFill)
         "QqWwEeRr!@#$%^&*(){}[]+=_-\\\"\':;?/.><,SsDdFfGgHhAaZzXxBb"
@@ -393,9 +414,14 @@ main = do
       sequence_ $ map (\char -> 
         writeGlyph 20 ft char purpleFill)
         "QqWwEeRr!@#$%^&*(){}[]+=_-\\\"\':;?/.><,SsDdFfGgHhAaZzXxBb"
+      -}
+      {-
       sequence_ $ map (\t ->
         writeGlyphAnim t 150 ft 'Q' purpleFill)
         [1..200]
+      -}
+      writeString 1000 ft "Hello World!" (\pt -> Just $ LRGBA ((sin ((pt^.x)/100))^2) ((cos ((pt^. x)/101))^2) 0.3 1.0)
+      writeString 1000 ft "Hiu bebisar!" (\pt -> Just $ LRGBA ((sin ((pt^.x)/100))^2) ((cos ((pt^. x)/101))^2) 0.3 1.0)
 
   --I.writeImage "img/circTest-main.png" $ 
   --  convertToImage . renderLayered (500,500) defaultBox $ testLayers

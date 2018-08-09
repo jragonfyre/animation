@@ -9,6 +9,7 @@ module Geometry.Affine where
 
 import Geometry.Types
 import Control.Lens (over, (&), (^.), (%~), from, each, (^..), (*~), (+~), (-~), allOf)
+import Control.Lens.Traversal
 
 import Utils
 
@@ -32,6 +33,19 @@ class Zeroable a where
 
 class Geometric a where
   transform :: Affine -> a -> a
+
+-- objects determined by points
+class Pointed a where
+  -- forall f. Applicative f => (Point -> f Point) -> a -> f a
+  pointsOf :: Traversal' a Point
+
+instance Traversable t => Pointed (t Point) where
+  pointsOf = traverse
+
+{-
+instance Pointed a => Geometric a where
+  transform aff pted = pted & pointsOf %~ (aff *.)
+-}
 
 class Unitable a where
   unit :: a
@@ -130,7 +144,7 @@ instance Multiplicable Matrix Affine Affine where
     in
       makeAffine (mat*.m1) (mat*.trans)
 instance Multiplicable Affine Vector Vector where 
-  (*.) aff vec = (aff^.linear) *. vec +. (aff^.translation)
+  (*.) aff vec = (aff^.linear) *. vec
 instance Multiplicable Affine Point Point where 
   (*.) aff pt = (aff^.linear) *. pt +. (aff^.translation)
 instance Multiplicable Vector Point Double where 
@@ -143,6 +157,8 @@ instance Multiplicable Vector Vector Double where
 instance Geometric Vector where
   transform = (*.)
 
+instance Pointed Point where
+  pointsOf inj pt = inj pt
 instance Geometric Point where
   transform = (*.)
 
@@ -165,6 +181,8 @@ instance Geometric HalfPlane where
     in
       makeHalfPlane tnorm trad
 
+instance Pointed PolyLine where
+  pointsOf = points
 instance Geometric PolyLine where
   transform aff pl = pl & points %~ (transform aff)
 
@@ -459,8 +477,11 @@ rotate theta =
   in 
     ((ct,st),(-st,ct))^.from matAsComponents
 
+diagonal :: Double -> Double -> Matrix
+diagonal a d = ((a,0),(0,d))^.from matAsComponents
+
 scale :: Double -> Matrix
-scale s = ((s,0),(0,s))^.from matAsComponents
+scale s = diagonal s s
 
 matrixToAffine :: Matrix -> Affine
 matrixToAffine mat = makeAffine mat zero

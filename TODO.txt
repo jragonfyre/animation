@@ -1,0 +1,39 @@
+1. Add stroking to paths 
+     a. Segments are easyish, but need to properly join them at corners
+     b. Tiller-Hanson is probably easiest for quadratic Beziers
+     c. Cubic Beziers are currently a problem, particularly since I don't have a great source of complicated 
+        cubic bezier pathed objects to test on.
+2. Add elliptical arcs to supported path segments
+3. Add circular/elliptical contours perhaps before completing 2, though it would be simpler to specify a 
+   circle/ellipse by its center rather than a point on its boundary
+4. Write functions to generate paths out of primitives.
+5. Make a decision on path specification,
+   should a segment omit the first or final point.
+   Reasons to omit final point.
+     The first segment doesn't need to be a starting point for the path, the first segment contains the 
+     starting point
+   Reasons to omit the first point.
+     SVG does it this way.
+     Makes a lot of sense if you use the pen abstraction. 
+     I.e., this way the pen starts at a point, and each segment is the information for how to draw it given
+     a "current point"
+   I'm personally leaning towards sticking with my version, and using the PathBuilder module for the pen 
+   abstraction
+   Also note that ClosedPaths when stored this way are statically guaranteed to be closed. We don't have to
+   worry about 
+6. Make PathBuilder a Writer monad, so that we can use do notation to write paths, would be *super* elegent 
+   to use.
+7. Create composite objects out of contours and 
+8. Refactor the OpenPath/ClosedPath/SimpleClosedPath abstraction. 
+   Realistically though, the ideal abstraction is one where 
+   OpenPath is a true path
+   SimpleClosedPath is a simple contour
+   ClosedPath is a bad abstraction
+   ClosedPath is a collection of contours intended to be drawn together to specify a region currently
+9. Fix font loading. Either edit FontyFruity to fix loading of certain fonts. Possibly the issue is properly
+   checking flags for on/off curve points.
+   Or write my own ttf loader. I will probably eventually write a ttf loader, since I will also want an otf
+   loader.
+10. Improve Rasterization to only rasterize an object within its bounding box. 
+11. Improve small scale rasterization (i.e. for fonts at low pixel sizes)
+

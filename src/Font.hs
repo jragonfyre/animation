@@ -11,9 +11,10 @@ module Font
   ) where
 
 import Geometry.Types
+import Geometry.Affine
 import Geometry.Path
 import Geometry.PathBuilder
-import GHC.Float (float2Double)
+import GHC.Float (float2Double,double2Float)
 import Graphics.Text.TrueType
 
 import Data.Vector (Vector, toList)
@@ -48,6 +49,25 @@ rawGlyphToPath = process . concat . map (rgListToSCP . V.toList) . _rawGlyphCont
     rgLHelper [x] = [Z]
     rgLHelper ((x1,y1):(x2,y2):xs) =
       (QA (fromIntegral x1) (fromIntegral y1) (fromIntegral x2) (fromIntegral y2)) : (rgLHelper xs)
+
+
+stringToPath :: Int -> Double -> Font -> String -> ClosedPath
+stringToPath dpi pts ft str = 
+  let
+    contours = concat $
+      getStringCurveAtPoint
+        (dpi)
+        (0,0)
+        [(ft, PointSize (double2Float pts), str)]
+    contourToSCP [] = []
+    contourToSCP ((x,y):xs) = (MA (float2Double x) (float2Double y)):(contHelper xs)
+    contHelper [] = [Z]
+    contHelper [x] = [Z]
+    contHelper ((x1,y1):(x2,y2):xs) =
+      (QA (float2Double x1) (float2Double y1) (float2Double x2) (float2Double y2)) : (contHelper xs)
+  in
+    transform (matrixToAffine (diagonal 1 (-1))) . process . concat . map (contourToSCP . V.toList) $ contours
+
 
 
 
