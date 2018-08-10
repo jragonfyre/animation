@@ -111,6 +111,9 @@ makeContour = Contour . V.fromList
 newtype Path = Path { pathSegs :: (Vector PathSegment, Point) }
   deriving (Show, Eq, Ord, Read)
 
+makePath :: [PathSegment] -> Point -> Path
+makePath ps cap = Path (V.fromList ps, cap)
+
 numSegsC :: Contour -> Int
 numSegsC = V.length . contourSegs
 
@@ -162,6 +165,23 @@ joinPath Path{pathSegs=(ps,cap)} =
   else
     Nothing
 
+reverseP :: Path -> Path
+reverseP Path{pathSegs=(ps,cap)} = Path (V.reverse $ V.imap f ps, (pSegStart $ (ps!0)))
+  where
+    l = V.length ps
+    reverseStart i = if i == l-1 then cap else (pSegStart $ ps!(i+1))
+    f i (PathSeg _) = PathSeg (reverseStart i)
+    f i (PathBez2 _ c) = PathBez2 (reverseStart i) c
+    f i (PathBez3 _ c d) = PathBez3 (reverseStart i) d c
+
+reverseC :: Contour -> Contour
+reverseC Contour{contourSegs=cs} = Contour . V.reverse $ V.imap f cs
+  where
+    l = V.length cs
+    reverseStart i = pSegStart $ cs!((i+1) `mod` l)
+    f i (PathSeg _) = PathSeg (reverseStart i)
+    f i (PathBez2 _ c) = PathBez2 (reverseStart i) c
+    f i (PathBez3 _ c d) = PathBez3 (reverseStart i) d c
 
 --toWholeSegsOP :: Path -> Vector WholePathSegment
 
