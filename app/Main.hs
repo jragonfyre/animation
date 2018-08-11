@@ -395,6 +395,22 @@ writeGlyphAnim time height font char fill =
       ("img/char-anim-test-frame-"++(show time)++"-"++cname++"-("++(show width)++","++(show height)++").png")
       (convertToImage raster)
     
+displayClosedPath :: Int -> ClosedPath -> IO ()
+displayClosedPath height cont =
+  let
+    bbox = bounds cont
+    (w,h) = bbox^.dimensions.vecAsPair
+    width = ceiling $ (w/h) * fromIntegral height
+    nw = h*(fromIntegral width)/(fromIntegral height)
+    asprat = makeVector nw h
+    border = (0.05::Double) *. asprat
+    nbox = makeBox ((bbox^.corner)-.border) ((1.1::Double) *. asprat)
+    fill = solidFill $ LRGBA 0.6 0.2 0.8 1.0
+    rendrbl = [MRasterizable cont fill scanRasterizer mappend]
+  in do
+    raster <- mRenderLayered (width,height) nbox rendrbl
+    I.displayImage
+      (convertToImage raster)
 
 main :: IO ()
 main = do

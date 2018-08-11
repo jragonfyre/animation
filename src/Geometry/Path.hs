@@ -39,6 +39,7 @@ pSegStart (PathSeg s) = s
 pSegStart (PathBez2 s _) = s
 pSegStart (PathBez3 s _ _) = s
 
+
 data WholePathSegment 
   = WPathSeg !Segment
   | WPathBez2 !Bezier2
@@ -135,6 +136,15 @@ toWholeSegsC scp =
     n = numSegsC scp
   in
     imap (\i pseg -> toWholeSeg pseg (pSegStart (psegs!((i+1) `mod` n)))) psegs
+
+toWholeSegsP :: Path -> Vector WholePathSegment
+toWholeSegsP path =
+  let
+    (psegs,cap) = pathSegs path
+    n = numSegsP path
+  in
+    imap (\i pseg -> toWholeSeg pseg (if i==n then cap else (pSegStart (psegs!(i+1))))) psegs
+
 
 toWholeSegsCP :: ClosedPath -> Vector WholePathSegment
 toWholeSegsCP = V.concat . map toWholeSegsC

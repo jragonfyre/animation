@@ -503,6 +503,7 @@ circRegs = (map circleRegion [circ1,circ2,circ3])
 purpleQ :: [MRasterizable D IO]
 purpleQ = [MRasterizable glyphQ mpurple scanRasterizer mappend]
 
+
 testLayers :: [Rasterizable D]
 testLayers = zipWith4 (Rasterizable) 
   (circs ++ circs) 

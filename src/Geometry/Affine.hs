@@ -234,9 +234,16 @@ sqNorm vec =
   in
     xv^2+yv^2
 
--- rotates a vector left 90 degrees
+-- rotates a vector right 90 degrees, i.e. by -90 degrees
+-- this is chosen so that using the usual notion of orientation from mathematics, we get
+-- that perpendicular . tangentVec = normalVec to a curve, with the normal pointing outwards
+-- (rather than inwards)
 perpendicular :: Vector -> Vector
-perpendicular vec = makeVector (-vec^.y) (vec^.x)
+perpendicular vec = makeVector (vec^.y) (-vec^.x)
+
+-- rotates a vector left 90 degrees, i.e. by +90 degrees
+perpendicularLeft :: Vector -> Vector
+perpendicularLeft vec = makeVector (-vec^.y) (vec^.x)
 
 normalize :: Vector -> Vector
 normalize v = (1/vectorNorm v) *. v
@@ -252,6 +259,9 @@ det mat =
     (b,d) = v2^.vecAsPair
   in
     a*d-b*c
+
+cross :: Vector -> Vector -> Double
+cross v1 v2 = det (makeMatrix v1 v2)
 
 invertMatrix :: Matrix -> Matrix
 invertMatrix mat = 
