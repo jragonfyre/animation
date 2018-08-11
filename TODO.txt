@@ -45,7 +45,9 @@
 10. Improve Rasterization to only rasterize an object within its bounding box. 
 11. Improve small scale rasterization (i.e. for fonts at low pixel sizes)
 12. Implement more operations on paths and contours, e.g. rotation of contours, cutting of contours into
-    open paths, joining of open paths into contours
+    open paths (DONE), joining of open paths into contours (DONE)
 13. Add biarcs, biarc fitting to types of paths? They're apparently a *lot* simpler for a lot of things,
     in particular offset curves of biarc curves are biarc curves. Also this would be simple
     after completing 2,3
+14. Cubic Beziers aren't rasterizing at all. Perhaps not getting *any* solutions for critical points right now
+    don't know why. (URGENT)
