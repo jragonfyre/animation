@@ -1,12 +1,17 @@
 1. Add stroking to paths 
-     a. Segments are easyish, but need to properly join them at corners
-     b. Tiller-Hanson is probably easiest for quadratic Beziers
+     -- a. Segments are easyish, but need to properly join them at corners
+     -- DONE (for contours)
+     -- b. Tiller-Hanson is probably easiest for quadratic Beziers
+     -- DONE (for contours)
      c. Cubic Beziers are currently a problem, particularly since I don't have a great source of complicated 
         cubic bezier pathed objects to test on.
+        Cubic Beziers remain a problem. Might try a simple Tiller-Hanson approach for now.
 2. Add elliptical arcs to supported path segments
 3. Add circular/elliptical contours perhaps before completing 2, though it would be simpler to specify a 
-   circle/ellipse by its center rather than a point on its boundary
+   circle/ellipse by its center rather than a point on its boundary, might be best to keep these as a separate
+   contour because they are so simple
 4. Write functions to generate paths out of primitives.
+   E.g. makeRoundRect Stuff -> Contour
 5. Make a decision on path specification,
    should a segment omit the first or final point.
    Reasons to omit final point.
@@ -21,6 +26,9 @@
    abstraction
    Also note that ClosedPaths when stored this way are statically guaranteed to be closed. We don't have to
    worry about 
+   Decision is made. Paths will omit the final point at least in the internal implementation, partly because
+   it's better for type safety (tho I suppose it doesn't make too much of a difference, as long as you still
+   don't duplicate the start point at the beginning)
 6. Make PathBuilder a Writer monad, so that we can use do notation to write paths, would be *super* elegent 
    to use.
 7. Create composite objects out of contours and 
@@ -38,3 +46,6 @@
 11. Improve small scale rasterization (i.e. for fonts at low pixel sizes)
 12. Implement more operations on paths and contours, e.g. rotation of contours, cutting of contours into
     open paths, joining of open paths into contours
+13. Add biarcs, biarc fitting to types of paths? They're apparently a *lot* simpler for a lot of things,
+    in particular offset curves of biarc curves are biarc curves. Also this would be simple
+    after completing 2,3
