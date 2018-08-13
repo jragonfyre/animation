@@ -212,7 +212,7 @@ strokeExterior ss@StrokeStyle{strokeDistance = dist} cont@Contour{contourSegs=cs
     --csegL = V.toList cs
     ws = toWholeSegsC cont
     n = V.length cs
-    starts = fmap pSegStart cs
+    --starts = fmap pSegStart cs
     ends = V.imap (\i _ -> pSegStart $ (cs!((i+1)`mod`n))) cs
     normal1s = V.map (\wps -> pathNormal wps 1) ws
     normal2s = V.imap (\i _ -> pathNormal (ws!((i+1)`mod`n)) 0) ws
@@ -260,20 +260,22 @@ strokePathExterior ss@StrokeStyle{strokeDistance = dist} st end path@Path{pathSe
     --csegL = V.toList cs
     ws = toWholeSegsP path
     n = V.length ps
-    starts = fmap pSegStart cs
-    ends = V.imap (\i _ -> pSegStart $ (cs!((i+1)`mod`n))) cs
-    normal1s = V.map (\wps -> pathNormal wps 1) ws
-    normal2s = V.imap (\i _ -> pathNormal (ws!((i+1)`mod`n)) 0) ws
-    joins = V.zipWith3 (buildJoin ss) normal1s normal2s ends
+    ints = V.generate (n-1) $ flip getVertexP path . (+1)
+    normal1s = V.generate (n-1) $ (\i -> pathNormal (ws!i) 1)
+    normal2s = V.generate (n-1) $ (\i -> pathNormal (ws!(i+1)) 0)
+    joins = V.zipWith3 (buildJoin ss) normal1s normal2s ints
     joinSts = V.map lPathStart joins
+    eds = V.snoc joinSts end -- the start of the join is the end of the prior segment
     joinSegs = V.map lPathSegs joins
+    segs = V.snoc joinSegs [] -- just let the last join be empty, since it won't affect anything that way
     joinEnds = V.map lPathEnd joins
-    joinEndsRot = V.imap (\i _ -> joinEnds!((i-1)`mod`n)) joinEnds
-    parSegs = V.zipWith3 (parallelSegment dist) ws joinEndsRot joinSts
-    allSegs = V.zipWith (++) parSegs joinSegs
+    sts = V.cons st joinEnds
+    --joinEndsRot = V.imap (\i _ -> joinEnds!((i-1)`mod`n)) joinEnds
+    parSegs = V.zipWith3 (parallelSegment dist) ws sts eds
+    allSegs = V.zipWith (++) parSegs segs
     strokecs = concat allSegs
   in 
-    makeContour strokecs
+    makePath strokecs end
 
 -- strokes the path
 strokePath :: StrokeStyle -> Path -> Contour
@@ -284,8 +286,15 @@ strokePath ss p =
     segn = getWholeSegmentP ((length ps)-1) p
     begCap = buildCap ss (negify . pathTangent seg1 $ 0.0) (evaluate seg1 0.0)
     endCap = buildCap ss (pathTangent segn 1.0) (evaluate segn 1.0)
-    Path{pathSegs=(ps1,_)} = strokePathExterior ss (lPathEnd begCap) (lPathStart endCap) p
-    Path{pathSegs=(ps2,_)} = strokePathExterior ss (lPathEnd endCap) (lPathStart begCap) $ reverseP p
+    p1@Path{pathSegs=(ps1,_)} = strokePathExterior ss (lPathEnd begCap) (lPathStart endCap) p
+    p2@Path{pathSegs=(ps2,_)} = strokePathExterior ss (lPathEnd endCap) (lPathStart begCap) $ reverseP p
   in
-    Contour $ (V.++) ps1 ps2
-
+    Contour $ (V.concat) [ps1, V.fromList $ lPathSegs endCap, ps2, V.fromList $ lPathSegs begCap]
+    {-
+    ( p1
+    , endCap
+    , p2
+    , endCap
+    , Contour $ (V.concat) [ps1, V.fromList $ lPathSegs endCap, ps2, V.fromList $ lPathSegs begCap]
+    )
+    -}
