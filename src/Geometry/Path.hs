@@ -93,6 +93,27 @@ toWholeSeg (PathSeg p1) = WPathSeg . makeSegment p1
 toWholeSeg (PathBez2 s c) = WPathBez2 . makeBezier2 s c
 toWholeSeg (PathBez3 s c d) = WPathBez3 . makeBezier3 s c d
 
+getVertexC :: Int -> Contour -> Point
+getVertexC n Contour{contourSegs = cs} = pSegStart $ cs!(n `mod` (length cs))
+
+getVertexP :: Int -> Path -> Point
+getVertexP n Path{pathSegs = (ps,cap)} = 
+  let
+    l = length ps 
+    nn = n `mod` (l+1)
+  in
+    if nn == l
+    then
+      cap
+    else
+      pSegStart $ ps ! nn
+
+getWholeSegmentC :: Int -> Contour -> WholePathSegment
+getWholeSegmentC n c@Contour{contourSegs = cs} = toWholeSeg (cs!n) (getVertexC (n+1) c)
+
+getWholeSegmentP :: Int -> Path -> WholePathSegment
+getWholeSegmentP n p@Path{pathSegs = (ps,_)} = toWholeSeg (ps!n) (getVertexP (n+1) p)
+
 newtype Contour
   = Contour { contourSegs :: Vector PathSegment }
   deriving (Show, Eq, Ord, Read)
@@ -133,17 +154,19 @@ toWholeSegsC :: Contour -> Vector WholePathSegment
 toWholeSegsC scp = 
   let
     psegs = contourSegs scp
-    n = numSegsC scp
+    --n = numSegsC scp
   in
-    imap (\i pseg -> toWholeSeg pseg (pSegStart (psegs!((i+1) `mod` n)))) psegs
+    --imap (\i _ -> getWholeSegmentC i scp) psegs
+    imap (\i pseg -> toWholeSeg pseg (getVertexC (i+1) scp)) psegs
 
 toWholeSegsP :: Path -> Vector WholePathSegment
 toWholeSegsP path =
   let
     (psegs,cap) = pathSegs path
-    n = numSegsP path
+    --n = numSegsP path
   in
-    imap (\i pseg -> toWholeSeg pseg (if i==n then cap else (pSegStart (psegs!(i+1))))) psegs
+    --imap (\i _ -> getWholeSegmentP i path) psegs
+    imap (\i pseg -> toWholeSeg pseg (getVertexP (i+1) path)) psegs
 
 
 toWholeSegsCP :: ClosedPath -> Vector WholePathSegment

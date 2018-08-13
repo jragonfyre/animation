@@ -254,14 +254,12 @@ strokeContour s c = (strokeExterior s $ reverseC c, strokeExterior s c)
 -- but do the modification first!
 -- think I need to somehow unify paths with contours.
 -- they behave basically the same for a lot of applications
-strokePathExterior :: StrokeStyle -> Path -> Path
-strokePathExterior ss@StrokeStyle{strokeDistance = dist} path@Path{pathSegs=(ps,cap)} = 
+strokePathExterior :: StrokeStyle -> Point -> Point -> Path -> Path
+strokePathExterior ss@StrokeStyle{strokeDistance = dist} st end path@Path{pathSegs=(ps,cap)} = 
   let
     --csegL = V.toList cs
     ws = toWholeSegsP path
     n = V.length ps
-    begCap = buildCap ss (
-    endCap = 
     starts = fmap pSegStart cs
     ends = V.imap (\i _ -> pSegStart $ (cs!((i+1)`mod`n))) cs
     normal1s = V.map (\wps -> pathNormal wps 1) ws
@@ -281,8 +279,13 @@ strokePathExterior ss@StrokeStyle{strokeDistance = dist} path@Path{pathSegs=(ps,
 strokePath :: StrokeStyle -> Path -> Contour
 strokePath ss p =
   let
-    Path{pathSegs=(ps1,_)} = strokePathExterior ss p
-    Path{pathSegs=(ps2,_)} = strokePathExterior ss $ reverseP p
+    (ps,cap) = pathSegs p
+    seg1 = getWholeSegmentP 0 p
+    segn = getWholeSegmentP ((length ps)-1) p
+    begCap = buildCap ss (negify . pathTangent seg1 $ 0.0) (evaluate seg1 0.0)
+    endCap = buildCap ss (pathTangent segn 1.0) (evaluate segn 1.0)
+    Path{pathSegs=(ps1,_)} = strokePathExterior ss (lPathEnd begCap) (lPathStart endCap) p
+    Path{pathSegs=(ps2,_)} = strokePathExterior ss (lPathEnd endCap) (lPathStart begCap) $ reverseP p
   in
     Contour $ (V.++) ps1 ps2
 
