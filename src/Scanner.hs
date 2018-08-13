@@ -64,7 +64,17 @@ solveBezier2 :: Double -> Bezier2 -> Double -> [(Double, Double, Sign)]
 solveBezier2 tol bez y =
   let
     (b2,b1,b0) = yCoeffs2 bez
-    ts = if abs b2 < tol^2 then [(y-b0)/b1] else solveQuadratic (b2,b1,b0-y)
+    -- TODO fix the tolerance stuff
+    ts = 
+      if abs b2 < tol
+      then 
+        if abs b1 < tol
+        then 
+          []
+        else
+          [(y-b0)/b1]
+      else
+        solveQuadratic (b2,b1,b0-y)
     (a2,a1,a0) = xCoeffs2 bez
     derivy t = 2*t*b2 + b1
     derivx t = 2*t*a2 + a1
@@ -119,7 +129,20 @@ solveBezier3 tol bez y =
   let
     (b3,b2,b1,b0) = yCoeffs3 bez
     (a3,a2,a1,a0) = xCoeffs3 bez
-    ts = solveCubic (b3,b2,b1,b0-y)
+    ts = 
+      if abs b3 < tol
+      then
+        if abs b2 < tol
+        then
+          if abs b1 < tol
+          then
+            []
+          else
+            [(y-b0)/b1]
+        else
+          solveQuadratic (b2,b1,b0-y)
+      else
+        solveCubic (b3,b2,b1,b0-y)
     derivy t = t*(3*t*b3+2*b2)+b1
     paramx t = t*(t*(t*a3+a2)+a1)+a0
     isValid t = 

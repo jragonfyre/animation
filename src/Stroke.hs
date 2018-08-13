@@ -230,6 +230,7 @@ strokeExterior ss@StrokeStyle{strokeDistance = dist} cont@Contour{contourSegs=cs
 strokeTestS :: StrokeStyle
 strokeTestS = StrokeStyle 1 (BezierJoin 0) (squareCap)
 
+
 strokeTestC :: Contour
 strokeTestC = makeContour 
   [ PathSeg (makePoint 10 10) 
