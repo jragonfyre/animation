@@ -27,19 +27,23 @@ data PathSegment
   = PathSeg !Point
   | PathBez2 !Point !Point
   | PathBez3 !Point !Point !Point
-  | PathEArc !Point !Double !Double !Double !Bool !Bool
+  --| PathEArc !Point !Matrix !Bool !Bool
   deriving (Show, Eq, Ord, Read)
 
 instance Geometric PathSegment where
   transform aff (PathSeg pt) = PathSeg (transform aff pt)
   transform aff (PathBez2 s c) = PathBez2 (transform aff s) (transform aff c)
   transform aff (PathBez3 s c d) = PathBez3 (transform aff s) (transform aff c) (transform aff d)
+  --transform aff (PathEArc s rx ry phi fA fS) =
+  --  PathEArc
+  --    (transform aff s)
+  --
 
 pSegStart :: PathSegment -> Point
 pSegStart (PathSeg s) = s
 pSegStart (PathBez2 s _) = s
 pSegStart (PathBez3 s _ _) = s
-
+--pSegStart (PathEArc s _ _ _ _ _) = s
 
 data WholePathSegment 
   = WPathSeg !Segment
