@@ -41,6 +41,13 @@ solveWPSeg tol (WPathBez3 bez) = solveBezier3 tol bez
 solveWPSegNTF :: Double -> Double -> WholePathSegment -> [(Double,(Sign,Double))]
 solveWPSegNTF tol y seg = map (\(t,xv,s)->(xv,(s,abs ((pathNormal seg t)^.x)))) $ solveWPSeg tol seg y 
 
+--solveCusp :: Double -> WholePathSegment -> [Double]
+--solveCusp 
+
+-- returns t-values of cusp(s) if there is one
+--solveCusp2 :: Double -> Bezier2 -> [Double]
+--solveCusp2 tol bez = 
+
 -- maybe t, x, sign
 solveSegment :: Double -> Segment -> Double -> [(Double, Double, Sign)]
 solveSegment tol seg y = 

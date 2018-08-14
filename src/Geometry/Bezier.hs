@@ -102,6 +102,12 @@ data Bezier3 = Bezier3
   }
   deriving (Read, Show, Eq, Ord)
 
+derivCoeffsCubic :: (Double,Double,Double,Double) -> (Double,Double,Double)
+derivCoeffsCubic (a3,a2,a1,_) = (3*a3,2*a2,a1)
+
+derivCoeffsQuadratic :: (Double,Double,Double) -> (Double,Double)
+derivCoeffsQuadratic (a2,a1,_) = (2*a2,a1)
+
 makeBezier3 :: Point -> Point -> Point -> Point -> Bezier3
 makeBezier3 sp cp1 cp2 ep =
   let

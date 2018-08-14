@@ -6,6 +6,7 @@
      c. Cubic Beziers are currently a problem, particularly since I don't have a great source of complicated 
         cubic bezier pathed objects to test on.
         Cubic Beziers remain a problem. Might try a simple Tiller-Hanson approach for now.
+        (DONE)
 2. Add elliptical arcs to supported path segments
 3. Add circular/elliptical contours perhaps before completing 2, though it would be simpler to specify a 
    circle/ellipse by its center rather than a point on its boundary, might be best to keep these as a separate
@@ -50,4 +51,7 @@
     in particular offset curves of biarc curves are biarc curves. Also this would be simple
     after completing 2,3
 14. Cubic Beziers aren't rasterizing at all. Perhaps not getting *any* solutions for critical points right now
-    don't know why. (URGENT)
+    don't know why. (URGENT) (DONE)
+15. Deal with cusps properly. Probably subdivide, figure out how to get tangents and normals at cusps, and 
+    then cap the resulting join (if the tangents are antiparallel ofc). I suppose we could have a sharp point
+    that isn't a cusp. (Do math xD)
