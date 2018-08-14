@@ -8,8 +8,12 @@
 module Geometry.Affine where
 
 import Geometry.Types
+import PolynomialSolver
+
 import Control.Lens (over, (&), (^.), (%~), from, each, (^..), (*~), (+~), (-~), allOf)
 import Control.Lens.Traversal
+
+import Data.Maybe (mapMaybe)
 
 import Utils
 
@@ -109,6 +113,8 @@ instance Subtractable Point Point Vector where
   (-.) v1 v2 = makeVector (v1^.x - v2^.x) (v1^.y - v2^.y)
 instance Subtractable Point Vector Point where
   (-.) v1 v2 = v1 & x -~ (v2 ^. x) & y -~ (v2 ^. y)
+instance Subtractable Matrix Matrix Matrix where
+  (-.) mat1 mat2 = mat1 & x %~ (-.(mat2^.x)) & y %~ (-.(mat2^.y))
 
 instance Multiplicable Double Vector Vector where 
   --(*.) :: Double -> Vector -> Vector
@@ -498,4 +504,66 @@ matrixToAffine mat = makeAffine mat zero
 
 translate :: Vector -> Affine
 translate = makeAffine unit
+
+translateToOrigin :: Point -> Affine
+translateToOrigin = translate . (origin -.)
+
+trace :: Matrix -> Double
+trace mat = 
+  let
+    ((a,_),(_,d)) = mat^.matAsComponents
+  in
+    a + d
+
+matrixEigenvalues :: Matrix -> [Double]
+matrixEigenvalues mat = 
+  solveQuadratic (1,-(trace mat), det mat)
+
+data Subspace = ZeroSubSp | OneDSubSp Vector | WholeSubSp
+  deriving (Show, Eq, Ord, Read)
+
+matrixKernel :: Matrix -> Subspace
+matrixKernel mat =
+  if det mat /= 0
+  then 
+    ZeroSubSp
+  else
+    if mat == zero
+    then
+      WholeSubSp
+    else
+      let
+        ((a,c),(b,d)) = mat^.matAsComponents
+      in 
+        OneDSubSp $ 
+          if a == 0
+          then
+            if b == 0
+            then
+              normalize $ makeVector (-d) c
+            else -- c==0, since det mat == 0
+              makeVector 1 0
+          else
+            normalize $ makeVector (-b) a
+
+-- eigenvalue, eigenvector pairs
+matrixEigenvectors :: Matrix -> [(Double,Vector)]
+matrixEigenvectors mat = 
+  let
+    f ev = case matrixKernel (mat -. (scale ev)) of 
+      ZeroSubSp -> 
+        Nothing
+      WholeSubSp ->
+        Nothing
+      OneDSubSp vec ->
+        Just (ev,vec)
+  in
+    mapMaybe f $ matrixEigenvalues mat
+
+symmetrizeMatrix :: Matrix -> Matrix
+symmetrizeMatrix mat =
+  let
+    ((a,c),(b,d)) = mat^.matAsComponents
+  in
+    ((a,(b+c)/2),((b+c)/2,d))^.from matAsComponents
 

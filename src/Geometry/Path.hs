@@ -27,6 +27,7 @@ data PathSegment
   = PathSeg !Point
   | PathBez2 !Point !Point
   | PathBez3 !Point !Point !Point
+  | PathEArc !Point !Double !Double !Double !Bool !Bool
   deriving (Show, Eq, Ord, Read)
 
 instance Geometric PathSegment where
