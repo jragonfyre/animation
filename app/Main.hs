@@ -434,6 +434,22 @@ displayPicture height pic =
     I.displayImage
       (convertToImage raster)
 
+writePicture :: Int -> String -> Picture -> IO ()
+writePicture height name pic =
+  let
+    bbox = bounds pic
+    (w,h) = bbox^.dimensions.vecAsPair
+    width = ceiling $ (w/h) * fromIntegral height
+    nw = h*(fromIntegral width)/(fromIntegral height)
+    asprat = makeVector nw h
+    border = (0.05::Double) *. asprat
+    nbox = makeBox ((bbox^.corner)-.border) ((1.1::Double) *. asprat)
+  in do
+    raster <- renderPicture (width,height) nbox pic
+    I.writeImage
+      ("img/picture-"++name++"-("++(show width)++","++(show height)++").png")
+      (convertToImage raster)
+
 main :: IO ()
 main = do
   let purpleFill = (solidFill $ LRGBA 0.5 0.2 0.7 1.0)
@@ -458,8 +474,10 @@ main = do
         writeGlyphAnim t 150 ft 'Q' purpleFill)
         [1..200]
       -}
-      writeString 1000 ft "Hello World!" (\pt -> LRGBA ((sin ((pt^.x)/100))^2) ((cos ((pt^. x)/101))^2) 0.3 1.0)
-      writeString 1000 ft "Hiu bebisar!" (\pt -> LRGBA ((sin ((pt^.x)/100))^2) ((cos ((pt^. x)/101))^2) 0.3 1.0)
+      --writeString 1000 ft "Hello World!" (\pt -> LRGBA ((sin ((pt^.x)/100))^2) ((cos ((pt^. x)/101))^2) 0.3 1.0)
+      --writeString 1000 ft "Hiu bebisar!" (\pt -> LRGBA ((sin ((pt^.x)/100))^2) ((cos ((pt^. x)/101))^2) 0.3 1.0)
+      return ()
+  writePicture 2000 "penguin" penguin
 
   --I.writeImage "img/circTest-main.png" $ 
   --  convertToImage . renderLayered (500,500) defaultBox $ testLayers

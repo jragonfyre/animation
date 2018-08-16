@@ -28,7 +28,7 @@ import Geometry.PathBuilder (glyphQ)
 import Scanner
 
 import Model
-import Picture
+import Picture hiding (orange)
 
 import Utils
 

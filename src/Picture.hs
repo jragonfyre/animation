@@ -92,19 +92,70 @@ type Picture = [SimplePicture]
 tol :: Double
 tol = 1e-6
 
+orange :: LRGBA
+orange = LRGBA 1 0.4 0 1
+
+black :: LRGBA
+black = LRGBA 0 0 0 1
+
+white :: LRGBA
+white = LRGBA 1 1 1 1
+
 penguin :: Picture
 penguin =
   [ 
     fill
-      (LRGBA 1 1 1 1)
-      $ makeEllipseCont tol (makePoint 0 (-10)) (55,75,0)
+      white
+        [ makeEllipseCont tol (makePoint (-20) 100) (10,6,0)
+        , reverseC $ makeCircleCont tol (makePoint (-18) 100) 4
+        , makeEllipseCont tol (makePoint (20) 100) (10,6,0)
+        , reverseC $ makeCircleCont tol (makePoint (18) 100) 4
+        ]
   , fill
-      (LRGBA 0 0 0 1)
+      orange
+      $ [ makeContour
+            [ PathSeg (makePoint (-5) 85)
+            , PathSeg (makePoint 0 72)
+            , PathSeg (makePoint 5 85)
+            ]
+        , makeContour
+            [ PathBez2 (makePoint (-5) (-100)) (makePoint (-15) (-95))
+            , PathSeg (makePoint (-25) (-100))
+            , PathBez2 (makePoint (-55) (-115)) (makePoint (-75) (-125))
+            , PathSeg (makePoint (-55) (-125))
+            , PathBez2 (makePoint (-5) (-125)) (makePoint (-1) (-125))
+            , PathSeg (makePoint (-3) (-105))
+            ]
+        , makeContour
+            [ PathBez2 (makePoint (5) (-100)) (makePoint (15) (-95))
+            , PathSeg (makePoint (25) (-100))
+            , PathBez2 (makePoint (55) (-115)) (makePoint (75) (-125))
+            , PathSeg (makePoint (55) (-125))
+            , PathBez2 (makePoint (5) (-125)) (makePoint (1) (-125))
+            , PathSeg (makePoint (3) (-105))
+            ]
+        {-
+        , makeContour
+            [ PathBez2 (makePoint (5) (-100)) (makePoint (15) (-95))
+            , PathSeg (makePoint (25) (-100))
+            , PathBez2 (makePoint (35) (-105)) (makePoint (45) (-110))
+            , PathSeg (makePoint (35) (-110))
+            , PathBez2 (makePoint (5) (-110)) (makePoint (1) (-110))
+            , PathSeg (makePoint (3) (-90))
+            ]
+        -}
+        ]
+  , fill
+      (gaussianGradientRadii (makePoint 0 50) (50,20,0) orange white)
+      $ [ makeEllipseCont tol (makePoint 0 (-30)) (55,80,0)
+        ]
+  , fill
+      black
       $ [ makeEllipseCont tol (makePoint 0 (-20)) (80,100,0)
         , makeEllipseCont tol (makePoint 0 90) (45,55,0)
         ]
   , fill
-      (LRGBA 1 1 1 1)
+      white
       $ makeRoundRect tol (makePoint 0 0) 150 200 (25,25)
   ]
 
