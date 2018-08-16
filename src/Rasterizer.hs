@@ -273,11 +273,14 @@ scanRasterizer (nx,ny) box cp =
             tsum = newsum + (sum $ map (signValue . fst . snd) (L.takeWhile (\c -> (fst c) < xv) ccrits))
             d = case ccrits of 
               [] ->
-                0
+                1
               ((x,(_,xscale)):_) -> 
-                0.5*(exp (-10*((xv-x)*xscale/(pixWidth))^2))
+                1/(1+(exp (-7*(xv-x)*xscale/pixWidth)))
+                --0.5*(exp (-10*((xv-x)*xscale/(pixWidth))^2))
           in
-            Just (if (tsum == 0) then 0+d else 1-d, (i+1,newsum,rcrits))
+            -- TODO: Fix this expression
+            --Just (if (tsum == 0) then 0+d else 1-d, (i+1,newsum,rcrits))
+            Just (d*(indicate (tsum/=0)) + (1-d)*(indicate (newsum /= 0)), (i+1,newsum,rcrits))
     rows = V.map (\cs -> V.unfoldrN (nx+1) unfoldRow (0,0,cs))  critPts
     corners =
       fromFunction (ix2 (nx+1) (ny+1)) 

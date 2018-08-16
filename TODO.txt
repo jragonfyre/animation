@@ -1,13 +1,14 @@
 1. Improve stroking, particularly where Tiller-Hanson breaks down.
-2. Add elliptical arcs to supported path segments
+2. Add elliptical arcs to supported path segments (DONE)
 3. Add circular/elliptical contours perhaps before completing 2, though it would be simpler to specify a 
    circle/ellipse by its center rather than a point on its boundary, might be best to keep these as a separate
    contour because they are so simple
 4. Write functions to generate paths out of primitives.
    E.g. makeRoundRect Stuff -> Contour
+   Update: This has been started, but we need to add more shapes.
 5. Make PathBuilder a Writer monad, so that we can use do notation to write paths, would be *super* elegent 
-   to use.
-6. Create composite objects out of contours and 
+   to use. Or something. Writer doesn't *quite* work as I need.
+6. Create composite objects out of contours and whatnot
 7. Refactor the Path/Contour/ClosedPath abstraction. 
    ClosedPath isn't a great abstraction. Also it would be great to provide a more unified interface to 
    Path/Contours. It's nice to have a type level distinction between the concepts, but they also behave very 
@@ -25,3 +26,7 @@
 13. Deal with cusps properly. Probably subdivide, figure out how to get tangents and normals at cusps, and 
     then cap the resulting join (if the tangents are antiparallel ofc). I suppose we could have a sharp point
     that isn't a cusp. (Do math xD)
+14. Fix antialiasing. Fixing a bug in antialiasing where overlapping contours didn't render properly
+    introduced a new bug where the right side of shapes don't antialias properly.
+15. Fix an apparent bug with stroking ellipses (though I don't have a good example,
+    but it shows up with (100,50,pi/3) and a strokeWidth of 15)

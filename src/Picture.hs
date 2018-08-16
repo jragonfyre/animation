@@ -89,3 +89,24 @@ instance GBounded SimplePicture where
 
 type Picture = [SimplePicture]
 
+tol :: Double
+tol = 1e-6
+
+penguin :: Picture
+penguin =
+  [ 
+    fill
+      (LRGBA 1 1 1 1)
+      $ makeEllipseCont tol (makePoint 0 (-10)) (55,75,0)
+  , fill
+      (LRGBA 0 0 0 1)
+      $ [ makeEllipseCont tol (makePoint 0 (-20)) (80,100,0)
+        , makeEllipseCont tol (makePoint 0 90) (45,55,0)
+        ]
+  , fill
+      (LRGBA 1 1 1 1)
+      $ makeRoundRect tol (makePoint 0 0) 150 200 (25,25)
+  ]
+
+
+
