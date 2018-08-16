@@ -402,6 +402,7 @@ makeBoxSides lx mx ly my =
 makeBoxCorners :: Point -> Point -> Box
 makeBoxCorners llc urc = makeBox llc (urc-.llc)
 
+-- width, height are the radii
 makeBoxCenter :: Point -> Double -> Double -> Box
 makeBoxCenter cent width height = 
   let
@@ -517,11 +518,26 @@ trace mat =
 
 matrixEigenvalues :: Matrix -> [Double]
 matrixEigenvalues mat = 
-  solveQuadratic (1,-(trace mat), det mat)
+  case solveQuadratic (1,-(trace mat), det mat) of 
+    [] ->
+      []
+    [ev] -> [ev]
+    [ev1,ev2] -> if ev1==ev2 then [ev1] else [ev1,ev2]
+    _ -> []
+
+matrixEigenvaluesTolerance :: Double -> Matrix -> [Double]
+matrixEigenvaluesTolerance tol mat = 
+  case solveQuadratic (1,-(trace mat), det mat) of 
+    [] ->
+      []
+    [ev] -> [ev]
+    [ev1,ev2] -> if abs (ev1-ev2) < tol then [ev1] else [ev1,ev2]
+    _ -> []
 
 data Subspace = ZeroSubSp | OneDSubSp Vector | WholeSubSp
   deriving (Show, Eq, Ord, Read)
 
+-- suffers from rounding error (numerical instability)
 matrixKernel :: Matrix -> Subspace
 matrixKernel mat =
   if det mat /= 0
@@ -546,19 +562,57 @@ matrixKernel mat =
           else
             normalize $ makeVector (-b) a
 
+matrixKernelTolerance :: Double -> Matrix -> Subspace
+matrixKernelTolerance tol mat =
+  if abs (det mat) >= tol
+  then 
+    ZeroSubSp
+  else
+    let
+      ((a,c),(b,d)) = mat^.matAsComponents
+    in 
+      if (abs a < tol) && (abs b < tol) && (abs c < tol) && (abs d < tol)
+      then
+        WholeSubSp
+      else
+        OneDSubSp $ 
+          if abs a < tol
+          then
+            if abs b < tol
+            then
+              normalize $ makeVector (-d) c
+            else -- c==0, since det mat == 0
+              makeVector 1 0
+          else
+            normalize $ makeVector (-b) a
+
 -- eigenvalue, eigenvector pairs
 matrixEigenvectors :: Matrix -> [(Double,Vector)]
 matrixEigenvectors mat = 
   let
     f ev = case matrixKernel (mat -. (scale ev)) of 
       ZeroSubSp -> 
-        Nothing
+        []
       WholeSubSp ->
-        Nothing
+        [(ev,makeVector 1 0),(ev,makeVector 0 1)]
       OneDSubSp vec ->
-        Just (ev,vec)
+        [(ev,vec)]
   in
-    mapMaybe f $ matrixEigenvalues mat
+    concat $ map f $ matrixEigenvalues mat
+
+matrixEigenvectorsTolerance :: Double -> Matrix -> [(Double,Vector)]
+matrixEigenvectorsTolerance tol mat = 
+  let
+    f ev = case matrixKernelTolerance tol (mat -. (scale ev)) of 
+      ZeroSubSp -> 
+        []
+      WholeSubSp ->
+        [(ev,makeVector 1 0),(ev,makeVector 0 1)]
+      OneDSubSp vec ->
+        [(ev,vec)]
+  in
+    concat $ map f $ matrixEigenvaluesTolerance tol mat
+
 
 symmetrizeMatrix :: Matrix -> Matrix
 symmetrizeMatrix mat =

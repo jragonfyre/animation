@@ -36,6 +36,7 @@ solveWPSeg :: Double -> WholePathSegment -> Double -> [(Double,Double,Sign)]
 solveWPSeg tol (WPathSeg seg) = solveSegment tol seg
 solveWPSeg tol (WPathBez2 bez) = solveBezier2 tol bez
 solveWPSeg tol (WPathBez3 bez) = solveBezier3 tol bez
+solveWPSeg tol (WPathEArc earc) = solveEArc tol earc
 
 -- the second double is the absolute value of the x coordinate of the normal to the curve at the point.
 -- used for antialiasing
@@ -165,4 +166,41 @@ solveBezier3 tol bez y =
       mapMaybe isValid ts
     else
       []
+
+solveEArc :: Double -> EllipticalArc -> Double -> [(Double,Double,Sign)]
+solveEArc tol earc yv = 
+  let
+    ell = earc^.ellipse
+    cent = ell^.center
+    (cx,cy) = cent^.ptAsPair
+    (mat,_) = ell^.matrix
+    ((a,c),(b,d))=mat^.matAsComponents
+    rely = yv-cy
+    possXs = solveQuadratic (a,(b+c)*rely,d*rely^2-1)
+    rx = ell^.radX
+    ry = ell^.radY
+    ph = ell^.phi
+    st = earc^.start
+    delt = earc^.delta
+    rot = rotate (-ph)
+    dtol = abs (tol*delt)
+    isValid relx = 
+      let
+        v = makeVector relx rely
+        (rxcth, rysth) = (rot *. v)^.vecAsPair
+        thet1 = angle xVec (makeVector (rxcth/rx) (rysth/ry))
+        thets = filter (\thc -> if delt >= 0
+                                then (st - dtol) <= thc && thc <= (st + delt + dtol)
+                                else (st + delt - dtol) <= thc && thc <= (st + dtol)
+                       )
+                       [thet1 - 2*pi, thet1, thet1 + 2*pi]
+        ts = map (\thet -> (thet-st)/delt) thets
+      in 
+        case ts of 
+          [] -> Nothing
+          [t] -> Just (t,relx+cx,signOf ((derivativeEArc earc t)^.y))
+          -- _ -> Nothing
+  in
+    mapMaybe isValid possXs
+    --if (withinY (bounds earc) y)
 

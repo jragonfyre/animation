@@ -12,7 +12,10 @@ module Stroke
 import Geometry.Types
 import Geometry.Affine
 import Geometry.Bezier
+import Geometry.Ellipse
 import Geometry.Path
+
+import Control.Lens ((^.))
 
 import qualified Data.Vector as V
 import Data.Vector ((!))
@@ -26,6 +29,7 @@ data JoinType
   -- maybe use SVG as a reference? uh duh. good idea self.
   | BevelJoin Double
   | BezierJoin Double -- essentially a miter join, but capped by a quadratic bezier instead of a sharp point
+  | RoundJoin -- joins with a circle
 -- 
 --  | ArcJoin Double 
   -- joins gaps between segments with a quadratic bezier with control point at the intersection of
@@ -40,6 +44,7 @@ data CapType
   -- second is the distance of the cap from the end of the path, currently not using the second
   --  | CircleCap
   | FlatCap Double -- capped by a flat segment. 0.0 means the cap passes through the end of the path, 1.0
+  | RoundCap
   -- means that the flat cap is strokeDistance away from the end of the path
   -- (That's SVG's square cap)
   deriving (Show, Eq, Ord, Read)
@@ -54,6 +59,7 @@ data StrokeStyle = StrokeStyle
   { strokeDistance :: Double
   , joinType :: JoinType
   , capType :: CapType
+  , ellipseTolerance :: Double
   }
   deriving (Show, Eq, Ord, Read)
 
@@ -95,6 +101,8 @@ buildCap ss tang center =
             v=(ar*dist)*.tang
           in
             ([PathSeg p1, PathSeg (p1+.v), PathSeg (p2+.v)],p2)
+      RoundCap ->
+        ([makeCircleSegment p1 dist True (ellipseTolerance ss)],p2)
 
     
 
@@ -119,9 +127,9 @@ buildJoin ss norm1 norm2 center =
       if norm1 == norm2 -- parallel join, no need for any joining
       then 
         ([], p1)
-      else -- antiparallel, i.e. cusp, right now I'll join with a segment
+      else -- antiparallel, i.e. cusp, right now I'll join with the current cap style
         buildCap ss (perpendicularLeft norm1) center
-        --([PathSeg p1], p2)
+        --([PathSeg p1], p2) used to be a segment
     else
       let 
         cVec = inv *. (makeVector dist dist)
@@ -140,6 +148,8 @@ buildJoin ss norm1 norm2 center =
               --([], pc)
             BezierJoin s -> -- ignore scaling for now
               ([PathBez2 p1 pc], p2)
+            RoundJoin -> 
+              ([makeCircleSegment p1 dist True (ellipseTolerance ss)],p2)
         else -- interior join
           ([], pc)
       
@@ -204,6 +214,20 @@ parallelSegment d (WPathBez3 bez) s e =
           -- this *really* doesn't work near a cusp xP still xP
   in
     [PathBez3 s (pc+.cVec1) (pd+.cVec2)]
+-- lazy parallel elliptical arc
+parallelSegment d (WPathEArc earc) s e = 
+  let
+    ell = earc^.ellipse
+    (_,tol) = ell^.matrix
+    rx = ell^.radX
+    ry = ell^.radY
+    rphi = ell^.phi
+    cent = ell^.center
+    delt = earc^.delta
+    dist = if delt >= 0 then d else (-d)
+  in
+    [PathEArc s (ellipseRadiiAndRotationToMatrix (rx+dist,ry+dist,rphi)) (abs delt >= pi) (delt >= 0) tol]
+
 
 -- IT WORKS!!!
 strokeExterior :: StrokeStyle -> Contour -> Contour
@@ -228,7 +252,7 @@ strokeExterior ss@StrokeStyle{strokeDistance = dist} cont@Contour{contourSegs=cs
     makeContour strokecs
 
 strokeTestS :: StrokeStyle
-strokeTestS = StrokeStyle 1 (BezierJoin 0) (squareCap)
+strokeTestS = StrokeStyle 1 (BezierJoin 0) (squareCap) 1e-7
 
 
 strokeTestC :: Contour

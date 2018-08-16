@@ -16,7 +16,9 @@ module Geometry
   , module Geometry.Affine
   , module Geometry.PolyLine
   , module Geometry.Bezier
+  , module Geometry.Ellipse
   , module Geometry.Path
+  , module Geometry.CommonPaths
 --  , module Geometry.PathBuilder
   ) where
 
@@ -30,12 +32,14 @@ import Geometry.Region
 import Geometry.Region.Types
 
 import Geometry.Path
+import Geometry.CommonPaths
 --import Geometry.PathBuilder
 
 import Geometry.Affine
 import Geometry.PolyLine
 
 import Geometry.Bezier
+import Geometry.Ellipse
 
 
 

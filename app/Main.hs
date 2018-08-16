@@ -2,6 +2,7 @@ module Main where
 
 import Geometry
 import Model
+import Picture
 import Font
 import Graphics.Text.TrueType (loadFontFile)
 import qualified Graphics.Image as I
@@ -409,6 +410,23 @@ displayClosedPath height cont =
     rendrbl = [MRasterizable cont fill scanRasterizer mappend]
   in do
     raster <- mRenderLayered (width,height) nbox rendrbl
+    I.displayImage
+      (convertToImage raster)
+
+displayPicture :: Int -> Picture -> IO ()
+displayPicture height pic =
+  let
+    bbox = bounds pic
+    (w,h) = bbox^.dimensions.vecAsPair
+    width = ceiling $ (w/h) * fromIntegral height
+    nw = h*(fromIntegral width)/(fromIntegral height)
+    asprat = makeVector nw h
+    border = (0.05::Double) *. asprat
+    nbox = makeBox ((bbox^.corner)-.border) ((1.1::Double) *. asprat)
+    --fill = solidFill $ LRGBA 0.6 0.2 0.8 1.0
+    --rendrbl = [MRasterizable cont fill scanRasterizer mappend]
+  in do
+    raster <- renderPicture (width,height) nbox pic
     I.displayImage
       (convertToImage raster)
 

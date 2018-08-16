@@ -28,6 +28,7 @@ import Geometry.PathBuilder (glyphQ)
 import Scanner
 
 import Model
+import Picture
 
 import Utils
 
@@ -474,6 +475,17 @@ mRenderLayered sz _ [] = return $ background sz
 mRenderLayered sz box ((MRasterizable reg fill rast comp):lls) = do
   lflat <- mRenderLayered sz box lls 
   mrender lflat comp sz box reg fill rast 
+
+renderPicture :: (Int,Int) -> Box -> Picture -> IO (Raster D LRGBA)
+renderPicture sz bx spics = 
+  mRenderLayered
+    sz
+    bx 
+    $ map 
+      (\(SimplePicture fl cp) ->
+          MRasterizable cp fl scanRasterizer mappend
+      )
+      spics
 
 toPixel :: LRGBA -> I.Pixel RGB Double
 toPixel (LRGBA r g b _) = I.PixelRGB r g b
