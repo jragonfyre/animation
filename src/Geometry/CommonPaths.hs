@@ -29,6 +29,21 @@ makeRegularNGon center rad stphi n =
       in
         PathSeg (center +. v)
 
+-- oriented positively
+makeEllipseCont :: Double -> Point -> (Double,Double,Double) -> Contour
+makeEllipseCont tol cent rs@(rx,ry,rphi) = 
+  let 
+    v1 = makeVector (rx*cos rphi) (rx * sin rphi)
+    v2 = negify v1
+  in
+    makeContour
+      [ makeArcSegment (cent+.v1) rs False True tol
+      , makeArcSegment (cent+.v2) rs False True tol
+      ]
+
+makeCircleCont :: Double -> Point -> Double -> Contour
+makeCircleCont tol cent rad = makeEllipseCont tol cent (rad,rad,0)
+
 -- center and xradius, yradius
 -- starts at center + (xradius,yradius) can therefore control the starting point
 -- should both have positive absolute value though

@@ -82,6 +82,7 @@ curveImage tol f dimen regionSize pixScale t r =
     )
 
 
+{-
 regionImage :: Double -> (Double -> Point -> Double) -> Int -> Double -> Double -> Double -> Image RPU RGB Double
 regionImage tol f dimen regionSize t r = 
   let
@@ -93,7 +94,7 @@ regionImage tol f dimen regionSize t r =
     sRegion = implicitRegion g $ withinTolerance (tol-2*pixWidth)
     lRegion = implicitRegion g $ withinTolerance (tol+2*pixWidth)
     color = LRGBA ((cos t)^2) ((sin t)^2) (0.5+cos t * sin t) 1
-    renderer = msaa 6 (filledRegion (solidFill color) region)
+    --renderer = msaa 6 (filledRegion (solidFill color) region)
     --sHeptagon = regularPolygon 7 (1-2*pixWidth)
     --lHeptagon = regularPolygon 7 (1+2*pixWidth)
   in
@@ -115,6 +116,7 @@ regionImage tol f dimen regionSize t r =
         else
           I.PixelRGB 0 0 0
     )
+-}
 
 
 aaHeptagonImage :: Int -> Double -> Image RPU RGB Double
@@ -268,6 +270,7 @@ elliptic t pt =
   in
     x^3-2*x+t-y^2
 
+{-
 writeRegion :: Double -> (Double -> Point -> Double) -> (Double,Double) -> String -> Int -> Int -> Double -> IO ()
 writeRegion tol f (st,et) fname nframes size regionSize = void $ do
     sequence_ $ map (\n ->
@@ -277,6 +280,7 @@ writeRegion tol f (st,et) fname nframes size regionSize = void $ do
           $ (pi/3000 * fromIntegral n)
       )
       [0..nframes-1]
+-}
 
 writeCurve :: Double -> (Double -> Point -> Double) -> (Double,Double) -> String -> Int -> Int -> Double -> Double -> IO ()
 writeCurve tol f (st,et) fname nframes size regionSize pixScale = void $ do
@@ -454,8 +458,8 @@ main = do
         writeGlyphAnim t 150 ft 'Q' purpleFill)
         [1..200]
       -}
-      writeString 1000 ft "Hello World!" (\pt -> Just $ LRGBA ((sin ((pt^.x)/100))^2) ((cos ((pt^. x)/101))^2) 0.3 1.0)
-      writeString 1000 ft "Hiu bebisar!" (\pt -> Just $ LRGBA ((sin ((pt^.x)/100))^2) ((cos ((pt^. x)/101))^2) 0.3 1.0)
+      writeString 1000 ft "Hello World!" (\pt -> LRGBA ((sin ((pt^.x)/100))^2) ((cos ((pt^. x)/101))^2) 0.3 1.0)
+      writeString 1000 ft "Hiu bebisar!" (\pt -> LRGBA ((sin ((pt^.x)/100))^2) ((cos ((pt^. x)/101))^2) 0.3 1.0)
 
   --I.writeImage "img/circTest-main.png" $ 
   --  convertToImage . renderLayered (500,500) defaultBox $ testLayers

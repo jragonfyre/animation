@@ -174,7 +174,7 @@ sign x | x >= 0 = 1.0
        | otherwise = -1.0
 
 angle :: Vector -> Vector -> Double
-angle u v = (sign (cross u v)) * (acos ((u`dot`v)/((vectorNorm u) * (vectorNorm v))))
+angle u v = (sign (cross u v)) * (acos $ max (-1) $ min 1 ((u`dot`v)/((vectorNorm u) * (vectorNorm v))))
 
 xVec :: Vector
 xVec = makeVector 1 0
@@ -212,7 +212,8 @@ endpointParamToCenterParam tol st ed rxi ryi rphi fA fS =
         (sqlam * rxint, sqlam * ryint)
     rx2=rx^2
     ry2=ry^2
-    scalar = (indicate (fA /= fS))* (sqrt $ (abs (rx2*ry2-rx2*y1p2-ry2*x1p2))/(rx2*y1p2+ry2*x1p2))
+    signScal = 2*(indicate (fA /= fS)) - 1
+    scalar = signScal * (sqrt $ (abs (rx2*ry2-rx2*y1p2-ry2*x1p2))/(rx2*y1p2+ry2*x1p2))
     vec = makeVector (rx*y1p/ry) (-ry*x1p/rx)
     v2 = scalar*.vec
     centP = v2^.vecAsPair.from ptAsPair

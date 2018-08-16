@@ -84,7 +84,7 @@ multisampleAntialiaser numSamplesV numSamplesH fill pix =
   in
     ((1/(fromIntegral $ numSamplesV*numSamplesH) :: Double) *.)
       . foldr (+.) invisible  
-      . mapMaybe fill
+      . map fill
       $ testpts
 
 msaa :: Integer -> Antialiaser
@@ -94,13 +94,13 @@ msaa n = multisampleAntialiaser n n
 makeLRGBA :: Double -> Double -> Double -> Double -> LRGBA
 makeLRGBA r g b a = LRGBA (r*a) (g*a) (b*a) a
 
-type Fill = Point -> Maybe LRGBA
+type Fill = Point -> LRGBA
 
 solidFill :: LRGBA -> Fill
-solidFill c _ = Just c
+solidFill = const
 
-filledRegion :: Fill -> Region -> Fill
-filledRegion f r pt = if (r^.inside) pt then f pt else Nothing
+--filledRegion :: Fill -> Region -> Fill
+--filledRegion f r pt = if (r^.inside) pt then f pt else Nothing
 
 type Pixel = Box
 

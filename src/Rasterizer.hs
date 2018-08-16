@@ -430,7 +430,7 @@ render bg comp sz@(nx,ny) box reg fill rasterizer =
       $ R.traverse
           (rasterizer sz box reg)
           id
-          (\lkup ix -> ((lkup ix)*.) . monoidMaybe . fill . centIxLoc $ ix)
+          (\lkup ix -> ((lkup ix)*.) . fill . centIxLoc $ ix)
 
 mrender :: (Source r LRGBA, Source t Double, Monad m) =>
   Raster r LRGBA -> Compositor -> (Int,Int) -> Box -> a -> Fill -> MRasterizer a t m -> m (Raster D LRGBA)
@@ -448,7 +448,7 @@ mrender bg comp sz@(nx,ny) box reg fill rasterizer =
       $ R.traverse
           rast
           id
-          (\lkup ix -> ((lkup ix)*.) . monoidMaybe . fill . centIxLoc $ ix)
+          (\lkup ix -> ((lkup ix)*.) . fill . centIxLoc $ ix)
 
 data Rasterizable t where
   Rasterizable :: a -> Fill -> Rasterizer a t -> Compositor -> Rasterizable t

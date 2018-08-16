@@ -38,7 +38,7 @@ instance Filling Fill where
   toFill = id
 
 instance Filling LRGBA where
-  toFill = const . Just 
+  toFill = const
 
 class Fillable a where 
   fill :: Filling b => b -> a -> SimplePicture
@@ -60,6 +60,29 @@ data Stroked a = Stroked StrokeStyle a
 
 data SimplePicture = SimplePicture Fill ClosedPath
   --deriving (Eq,Show,Read,Ord)
+
+-- function from R2 -> [0,1]
+type GradientF = Point -> Double
+
+data Gradient = Gradient GradientF LRGBA LRGBA
+
+gaussianGradient :: Point -> Matrix -> LRGBA -> LRGBA -> Gradient
+gaussianGradient cent mat = Gradient $ \pt -> 
+  let
+    v = pt -. cent
+    s = (transpose v) *. mat *. v
+  in
+    exp (-s^2)
+
+gaussianGradientRadii :: Point -> (Double,Double,Double) -> LRGBA -> LRGBA -> Gradient
+gaussianGradientRadii cent rs = gaussianGradient cent (ellipseRadiiToMatrix rs)
+
+instance Filling Gradient where 
+  toFill (Gradient f c1 c2) pt =
+    let 
+      t = f pt 
+    in
+      t*.c1 +. (1-t)*.c2
 
 instance GBounded SimplePicture where
   bounds (SimplePicture _ cp) = bounds cp
