@@ -1,32 +1,29 @@
 1. Improve stroking, particularly where Tiller-Hanson breaks down.
-2. Add elliptical arcs to supported path segments (DONE)
-3. Add circular/elliptical contours perhaps before completing 2, though it would be simpler to specify a 
-   circle/ellipse by its center rather than a point on its boundary, might be best to keep these as a separate
-   contour because they are so simple
-4. Write functions to generate paths out of primitives.
+2. Consider adding circular/elliptical contours as standalone contours not built out of path segments.
+3. Write functions to generate paths out of primitives.
    E.g. makeRoundRect Stuff -> Contour
    Update: This has been started, but we need to add more shapes.
-5. Make PathBuilder a Writer monad, so that we can use do notation to write paths, would be *super* elegent 
+4. Make PathBuilder a Writer monad, so that we can use do notation to write paths, would be *super* elegent 
    to use. Or something. Writer doesn't *quite* work as I need.
-6. Create composite objects out of contours and whatnot
-7. Refactor the Path/Contour/ClosedPath abstraction. 
+5. Create composite objects out of contours and whatnot
+6. Refactor the Path/Contour/ClosedPath abstraction. 
    ClosedPath isn't a great abstraction. Also it would be great to provide a more unified interface to 
    Path/Contours. It's nice to have a type level distinction between the concepts, but they also behave very 
    similarly to most things
-8. Fix font loading. Either edit FontyFruity to fix loading of certain fonts. Possibly the issue is properly
+7. Fix font loading. Either edit FontyFruity to fix loading of certain fonts. Possibly the issue is properly
    checking flags for on/off curve points.
    Or write my own ttf loader. I will probably eventually write a ttf loader, since I will also want an otf
    loader.
-9. Improve Rasterization to only rasterize an object within its bounding box. 
-10. Improve small scale rasterization (i.e. for fonts at low pixel sizes)
-11. Implement more operations on paths and contours, e.g. rotation of contours
-12. Add biarcs, biarc fitting to types of paths? They're apparently a *lot* simpler for a lot of things,
+8. Improve Rasterization to only rasterize an object within its bounding box. 
+9. Improve small scale rasterization (i.e. for fonts at low pixel sizes)
+10. Implement more operations on paths and contours, e.g. rotation of contours
+11. Add biarcs, biarc fitting to types of paths? They're apparently a *lot* simpler for a lot of things,
     in particular offset curves of biarc curves are biarc curves. Also this would be simple
     after completing 2,3
-13. Deal with cusps properly. Probably subdivide, figure out how to get tangents and normals at cusps, and 
+12. Deal with cusps properly. Probably subdivide, figure out how to get tangents and normals at cusps, and 
     then cap the resulting join (if the tangents are antiparallel ofc). I suppose we could have a sharp point
     that isn't a cusp. (Do math xD)
-14. Fix antialiasing. Fixing a bug in antialiasing where overlapping contours didn't render properly
+13. Fix antialiasing. Fixing a bug in antialiasing where overlapping contours didn't render properly
     introduced a new bug where the right side of shapes don't antialias properly.
-15. Fix an apparent bug with stroking ellipses (though I don't have a good example,
+14. Fix an apparent bug with stroking ellipses (though I don't have a good example,
     but it shows up with (100,50,pi/3) and a strokeWidth of 15)
