@@ -223,6 +223,9 @@ segmentParametrization seg = line (seg^.start) (seg^.end)
 vector :: Point -> Point -> Vector
 vector = (-.)
 
+unitDirection :: Double -> Vector
+unitDirection theta = makeVector (cos theta) (sin theta)
+
 origin :: Point
 origin = makePoint 0 0
 

@@ -44,6 +44,41 @@ makeEllipseCont tol cent rs@(rx,ry,rphi) =
 makeCircleCont :: Double -> Point -> Double -> Contour
 makeCircleCont tol cent rad = makeEllipseCont tol cent (rad,rad,0)
 
+-- first radius second radius
+--data GearSpecifier = GSpec Double Double 
+-- 
+parametrizeSpirograph :: (Double,Double,Double) -> Double -> Point
+parametrizeSpirograph (rext, rgear, rpen) d = 
+  let
+    -- angle to contact point
+    thext = d/rext
+    -- vector in direction of contact point
+    vec = unitDirection thext
+    -- vector to contact point
+    -- is rext *. vec
+    -- vector to center of innear gear is
+    vcent = (rext-rgear) *. vec
+    -- rotation of gear around center
+    thgear = d/rgear
+    -- direction of pen location from center of gear
+    npen = unitDirection thgear
+    vpen = rpen *. npen
+  in
+    origin +. (vcent +. vpen)
+
+-- centered at 0
+makeSpirograph :: (Double,Double,Double) -> Double -> Double -> Path
+makeSpirograph rs step end = buildParametrizedPath (parametrizeSpirograph rs) (0,step,end)
+
+buildParametrizedPath :: (Double -> Point) -> (Double,Double,Double) -> Path
+buildParametrizedPath p (pstart,pstep,pend) =
+  let
+    n = ceiling $ (pend-pstart)/pstep
+    ts = fmap ((pstart+) . (pstep *) . fromIntegral) [0..(n-1)]
+    lt = pstart + pstep*(fromIntegral n)
+  in
+    makePath (fmap (PathSeg . p) ts) (p lt)
+
 -- center and xradius, yradius
 -- starts at center + (xradius,yradius) can therefore control the starting point
 -- should both have positive absolute value though
