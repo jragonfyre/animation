@@ -36,6 +36,7 @@ data PathCommand
   | Z
   deriving (Read, Show, Eq, Ord)
 
+
 -- if you do stupid stuff, this won't work. Assumes that every path starts with a move absolute command
 -- also every path ends with a Z command
 -- works with the outline of Q below

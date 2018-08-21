@@ -624,3 +624,12 @@ symmetrizeMatrix mat =
   in
     ((a,(b+c)/2),((b+c)/2,d))^.from matAsComponents
 
+boxToCenterAndRadii :: Box -> (Point,Double,Double)
+boxToCenterAndRadii box = 
+  let
+    corn = box^.corner
+    dim = box^.dimensions
+    d2 = (0.5::Double) *. dim
+  in
+    (corn+.d2,d2^.x,d2^.y)
+

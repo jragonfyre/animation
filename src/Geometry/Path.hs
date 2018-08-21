@@ -195,6 +195,21 @@ toWholeSegsP path =
 toWholeSegsCP :: ClosedPath -> Vector WholePathSegment
 toWholeSegsCP = V.concat . map toWholeSegsC
 
+toWholeSegsPredSucc :: ClosedPath -> Vector (WholePathSegment, (Int,Int))
+toWholeSegsPredSucc = V.concat . flip toWholeSegsPSH 0
+
+toWholeSegsPSH :: ClosedPath -> Int -> [Vector (WholePathSegment, (Int,Int))]
+toWholeSegsPSH [] _ = []
+toWholeSegsPSH (cont:cs) n = 
+  let
+    segs = toWholeSegsC cont
+    l = V.length segs
+    is = V.enumFromN 0 l
+    ps = V.map ((+n) . (`mod` l) . (+(l-1))) is
+    ss = V.map ((+n) . (`mod` l) . (+1)) is
+  in
+    (V.zip segs (V.zip ps ss)) : (toWholeSegsPSH cs (n+l))
+
 cutContour :: Contour -> Path
 cutContour Contour{contourSegs=cs} = Path (cs, pSegStart $ (cs!0))
 

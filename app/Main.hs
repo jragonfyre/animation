@@ -2,6 +2,7 @@ module Main where
 
 import Geometry
 import Model
+import Stroke
 import Picture
 import Font
 import Graphics.Text.TrueType (loadFontFile)
@@ -450,6 +451,51 @@ writePicture height name pic =
       ("img/picture-"++name++"-("++(show width)++","++(show height)++").png")
       (convertToImage raster)
 
+spiroPath :: Path
+spiroPath = makeSpirograph (100,30,20) 3 10000
+
+spiroPicture :: (Filling a, Filling b) => a -> b -> Picture
+spiroPicture fo fi =
+  [ fill fi $ stroke strokeTestS{strokeDistance=1} spiroPath
+  , fill fo $ stroke strokeTestS{strokeDistance=3} spiroPath
+  ]
+
+-- assumes rext > rint > rpen
+spiroBoundingBox :: (Double, Double, Double) -> Box
+spiroBoundingBox (rext,rint,rpen) =
+  let
+    r = rext - rint + rpen
+  in
+    makeBoxCenter origin r r
+
+-- time is given by framenumber
+spiroAnim :: (Filling a, Filling b) => 
+  Double -> (Int -> (Double, (Int,Int,Int))) -> (Int -> a) -> (Int -> b) -> Int -> Picture 
+spiroAnim bounds rparam fo fi t =
+  let
+    (scale,(irext,irint,irpen)) = rparam t
+    rs = (scale * fromIntegral irext,scale * fromIntegral irint, scale * fromIntegral irpen)
+    ept = scale * (spirographEndingPoint irext irint)
+    --numSteps = 1000
+    step = 3
+    spiroAPath = makeSpirograph rs step ept
+  in
+    [ fill (fi t) $ stroke strokeTestS{strokeDistance=0.6} $ spiroAPath
+    , fill (fo t) $ stroke strokeTestS{strokeDistance=3} $ spiroAPath
+    , fill (LRGBA 0.2 0.2 0.2 1) $ useBox (makeBoxCenter origin bounds bounds) (makeRoundRect 1e-6) (30,20)
+    ]
+
+concreteAnim = spiroAnim 150 
+  (\fnum ->
+      (15/20,(200,10+fnum,fnum))
+  )
+  (\fnum ->
+      (circularGaussian (makePoint 0 0) 100 (LRGBA 1 0.5 0.3 1) (LRGBA 1 0.26 0 1))
+  )
+  (\fnum ->
+      (LRGBA 0 0 0 0.75)
+  )
+
 main :: IO ()
 main = do
   let purpleFill = (solidFill $ LRGBA 0.5 0.2 0.7 1.0)
@@ -477,7 +523,22 @@ main = do
       --writeString 1000 ft "Hello World!" (\pt -> LRGBA ((sin ((pt^.x)/100))^2) ((cos ((pt^. x)/101))^2) 0.3 1.0)
       --writeString 1000 ft "Hiu bebisar!" (\pt -> LRGBA ((sin ((pt^.x)/100))^2) ((cos ((pt^. x)/101))^2) 0.3 1.0)
       return ()
-  writePicture 2000 "penguin" penguin
+  --writePicture 2000 "penguin" penguin
+  {-
+  writePicture 1000 "spirograph-test" 
+    $ spiroPicture 
+        (circularGaussian (makePoint 0 0) 150 (LRGBA 1 0.5 0.3 1) (LRGBA 1 0.26 0 1))
+        (LRGBA 0.0 0.0 0.0 0.7)
+  -}
+  sequence_ $ map
+    (\i -> 
+      let 
+        resln = 1000
+      in
+        writePicture resln ("spiro-anim"++(show resln)++"-frame-" ++ (show i))
+          $ concreteAnim i
+    )
+    [0..180]
 
   --I.writeImage "img/circTest-main.png" $ 
   --  convertToImage . renderLayered (500,500) defaultBox $ testLayers

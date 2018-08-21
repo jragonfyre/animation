@@ -77,6 +77,9 @@ gaussianGradient cent mat = Gradient $ \pt ->
 gaussianGradientRadii :: Point -> (Double,Double,Double) -> LRGBA -> LRGBA -> Gradient
 gaussianGradientRadii cent rs = gaussianGradient cent (ellipseRadiiToMatrix rs)
 
+circularGaussian :: Point -> Double -> LRGBA -> LRGBA -> Gradient
+circularGaussian cent r = gaussianGradientRadii cent (r,r,0)
+
 instance Filling Gradient where 
   toFill (Gradient f c1 c2) pt =
     let 

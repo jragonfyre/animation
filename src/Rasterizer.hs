@@ -199,31 +199,46 @@ rasterizeConvex (nx,ny) box cp =
 sndOfThree :: (a,b,c) -> b
 sndOfThree (_,x,_) = x
 
-scanRasterBezierTolerance = 10**(-5)
+scanRasterBezierTolerance = 1e-8
+
 scanRasterDuplicateTolerance :: Double -> Double
 scanRasterDuplicateTolerance pixWidth = 3*pixWidth
 
--- assumes sorted on the double
-keepFirst :: Double -> [(Int, (Double,(Sign,Double)))] -> [(Int, (Double, (Sign,Double)))]
-keepFirst tol [] = []
-keepFirst tol [x] = [x]
-keepFirst tol ((t1@(i,(x1,(s1,_)))):(t2@(j,(x2,(s2,_)))):xs) =
-  if i/=j && s1 == s2 && (abs (x1-x2) < tol)
-  then
-    t1:(keepFirst tol xs)
-  else
-    t1:(keepFirst tol (t2:xs))
+-- assumes sorted on the (first) double
+keepFirst :: V.Vector (Int,Int) -> Double -> [(Int, (Double,(Sign,Double)))] -> [(Int, (Double, (Sign,Double)))]
+keepFirst _ _ [] = []
+keepFirst _ _ [x] = [x]
+keepFirst ps tol ((t1@(i,(x1,(s1,_)))):(t2@(j,(x2,(s2,_)))):xs) =
+  -- improve detection of whether i and j are adjacent segments or not
+  let 
+    (pi,si) = (V.!) ps i
+  in 
+    if (j == pi || j == si) && s1 == s2 && (abs (x1-x2) < tol)
+    then
+      t1:(keepFirst ps tol xs)
+    else
+      t1:(keepFirst ps tol (t2:xs))
 
 -- need to switch to accelerate to get a proper speedup :/
 scanRasterizer :: (Int,Int) -> Box -> ClosedPath -> IO (Raster D Double)
 scanRasterizer (nx,ny) box cp =
   let 
     bt=boxTop box
-    segs = V.toList $ toWholeSegsCP cp
-    ssegs = V.fromList $ L.sortOn (negate . boxTop . wpSegBoundingBox) segs
-    ssegixs = V.enumFromN 0 (V.length ssegs)
-    segstopy = fmap (boxTop . wpSegBoundingBox) ssegs
-    segsbottomy = fmap (boxBottom . wpSegBoundingBox) ssegs
+    segsPS = toWholeSegsPredSucc cp
+    segs = V.map fst segsPS
+    ps = V.map snd segsPS
+    segixs = V.enumFromN 0 (V.length segs)
+    --ssegs = V.fromList $ L.sortOn (negate . boxTop . wpSegBoundingBox) segs
+    --ssegixs satisfies V.map ((V.!) segs) ssegixs == ssegs
+    --invssegixs satisfies V.map ((V.!) ssegixs) invssegixs = V.enumFrom N 0 (V.length segs)
+    --and vice versa
+    ssegixs = V.fromList $ L.sortOn (negate . boxTop . wpSegBoundingBox . (V.!) segs) $ V.toList segixs
+    --invssegixs = V.map fst V.fromList $ L.sortOn snd . V.toList V.zip segixs ssegixs
+    --ssegixs = V.enumFromN 0 (V.length ssegs)
+    segstopy = fmap (boxTop . wpSegBoundingBox) segs
+    --segstopy = fmap (boxTop . wpSegBoundingBox) ssegs
+    segsbottomy = fmap (boxBottom . wpSegBoundingBox) segs
+    --segsbottomy = fmap (boxBottom . wpSegBoundingBox) ssegs
     (width,height) = box^.dimensions.vecAsPair
     (lx,ly) = box^.corner.ptAsPair
     pixWidth=width/fromIntegral nx
@@ -247,7 +262,7 @@ scanRasterizer (nx,ny) box cp =
       V.imap
         (\j sgixs -> 
           L.map snd
-            . keepFirst (scanRasterDuplicateTolerance pixWidth)
+            . keepFirst ps (scanRasterDuplicateTolerance pixWidth)
             . L.sortOn (fst . snd)
             . L.concat 
             . V.toList 
@@ -255,7 +270,8 @@ scanRasterizer (nx,ny) box cp =
                 (\i -> 
                   fmap (i,)
                     $ solveWPSegNTF scanRasterBezierTolerance (cornyLoc j) 
-                    $ (V.!) ssegs i
+                    --  $ (V.!) ssegs i
+                    $ (V.!) segs i
                 )
                 sgixs
         )
@@ -300,13 +316,13 @@ scanRasterizer (nx,ny) box cp =
       putStrLn "segs"
       --putStrLn $ show segs
       putStrLn "ssegs"
-      putStrLn $ show ssegs
+      --putStrLn $ show ssegs
       putStrLn "ssegixs"
-      putStrLn $ show ssegixs
+      --putStrLn $ show ssegixs
       putStrLn "segstopy"
-      putStrLn $ show segstopy
+      --putStrLn $ show segstopy
       putStrLn "segsbottomy"
-      putStrLn $ show segsbottomy
+      --putStrLn $ show segsbottomy
       putStrLn "relSegsUF"
       --putStrLn $ show $ relevantSegsUF (0,V.empty,ssegixs)
       putStrLn "relSegs"

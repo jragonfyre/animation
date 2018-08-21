@@ -70,6 +70,9 @@ parametrizeSpirograph (rext, rgear, rpen) d =
 makeSpirograph :: (Double,Double,Double) -> Double -> Double -> Path
 makeSpirograph rs step end = buildParametrizedPath (parametrizeSpirograph rs) (0,step,end)
 
+spirographEndingPoint :: Int -> Int -> Double
+spirographEndingPoint rext rint = 2*pi*(fromIntegral $ lcm rext rint)
+
 buildParametrizedPath :: (Double -> Point) -> (Double,Double,Double) -> Path
 buildParametrizedPath p (pstart,pstep,pend) =
   let
@@ -78,6 +81,14 @@ buildParametrizedPath p (pstart,pstep,pend) =
     lt = pstart + pstep*(fromIntegral n)
   in
     makePath (fmap (PathSeg . p) ts) (p lt)
+
+
+useBox :: Box -> (Point -> Double -> Double -> a) -> a
+useBox bx f = 
+  let
+    (cent, rx, ry) = boxToCenterAndRadii bx
+  in
+    f cent rx ry
 
 -- center and xradius, yradius
 -- starts at center + (xradius,yradius) can therefore control the starting point
