@@ -12,6 +12,7 @@ module Geometry.CommonPaths
 import Geometry.Types
 import Geometry.Affine
 import Geometry.Path
+import Geometry.Parametrized
 
 import Control.Lens ((^.))
 
@@ -66,21 +67,47 @@ parametrizeSpirograph (rext, rgear, rpen) d =
   in
     origin +. (vcent +. vpen)
 
+spiroDeriv :: (Double,Double,Double) -> Double -> Vector
+spiroDeriv (rext, rgear, rpen) d = 
+  let
+    -- ultimately, parametrize spirograph is of the form
+    -- constant + vcent + vpen
+    -- so spiro deriv is 
+    -- vcent' + vpen'
+    -- vcent = (rext-rgear) (cos d/rext,sin d/rext)
+    -- vcent' = (rext-rgear)/rext (-sin d/rext,cos d/rext)
+    -- vpen = rpen (cos d/rgear,sin d/rgear)
+    -- vpen' = rpen/rgear (-sin d/rgear,cos d/rgear)
+    -- angle to contact point
+    thext = d/rext
+    vecp = perpendicularLeft $ unitDirection thext
+    vcentp = (1-(rgear/rext)) *. vecp
+    thgear = d/rgear
+    npenp = perpendicularLeft $ unitDirection thgear
+    vpenp = (rpen/rgear) *. npenp
+  in
+    vcentp +. vpenp
+
+-- scale, rext, rint, rpen
+spiroContour0 :: (Double,Int,Int,Double) -> ParamContour0
+spiroContour0 (scale,rext,rint,rpen) = 
+  ParamContour0
+    (parametrizeSpirograph (scale * fromIntegral rext, scale * fromIntegral rint, scale * rpen))
+    (scale * spirographEndingPoint rext rint)
+
+spiroContour1 :: (Double,Int,Int,Double) -> ParamContour1
+spiroContour1 rs@(scale,rext,rint,rpen) = 
+  ParamContour1
+    (spiroContour0 rs)
+    (spiroDeriv (scale * fromIntegral rext, scale * fromIntegral rint, scale * rpen))
+
 -- centered at 0
 makeSpirograph :: (Double,Double,Double) -> Double -> Double -> Path
-makeSpirograph rs step end = buildParametrizedPath (parametrizeSpirograph rs) (0,step,end)
+makeSpirograph rs step end = buildParametrizedPath (ParamPath0 (parametrizeSpirograph rs) (0,end)) step
 
 spirographEndingPoint :: Int -> Int -> Double
 spirographEndingPoint rext rint = 2*pi*(fromIntegral $ lcm rext rint)
 
-buildParametrizedPath :: (Double -> Point) -> (Double,Double,Double) -> Path
-buildParametrizedPath p (pstart,pstep,pend) =
-  let
-    n = ceiling $ (pend-pstart)/pstep
-    ts = fmap ((pstart+) . (pstep *) . fromIntegral) [0..(n-1)]
-    lt = pstart + pstep*(fromIntegral n)
-  in
-    makePath (fmap (PathSeg . p) ts) (p lt)
 
 
 useBox :: Box -> (Point -> Double -> Double -> a) -> a
@@ -157,3 +184,16 @@ makeRoundRectCircles tol cent xrad yrad r = makeRoundRect tol cent xrad yrad (r,
 
 makeRoundRectCircDiag :: Double -> Point -> Double -> Double -> Double -> Double -> Contour
 makeRoundRectCircDiag tol cent xrad yrad r1 r2 = makeRoundRectDiag tol cent xrad yrad ((r1,r1),(r2,r2))
+
+
+controlPolygon :: Contour -> Contour
+controlPolygon = makeContour
+  . concat 
+  . fmap controlPolyPts 
+  . contourSegs
+  where
+    controlPolyPts (PathBez2 s c) = [PathSeg s,PathSeg c]
+    controlPolyPts (PathBez3 s c d) = [PathSeg s, PathSeg c,PathSeg d]
+    controlPolyPts x = [x]
+
+
