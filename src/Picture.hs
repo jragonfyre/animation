@@ -104,12 +104,15 @@ black = LRGBA 0 0 0 1
 white :: LRGBA
 white = LRGBA 1 1 1 1
 
-debugContour :: Double -> Contour -> Picture
-debugContour bl cont = 
-  [ fill (LRGBA 0.2 0 0 0.2) (stroke strokeTestS{strokeDistance = bl/2} (controlPolygon cont))
-  , fill (LRGBA 0 0.8 0 0.8) (stroke strokeTestS{strokeDistance = bl} cont)
-  , fill (LRGBA 1 1 1 1) cont
-  ]
+debugContour :: StrokeStyle -> Contour -> Picture
+debugContour str cont = 
+  let
+    bl = strokeDistance str
+  in
+    [ fill (LRGBA 0.6 0 0 0.6) (stroke str{strokeDistance = bl/2} (controlPolygon cont))
+    , fill (LRGBA 0 0.8 0 0.8) (stroke str cont)
+    , fill (LRGBA 1 1 1 1) cont
+    ]
 
 penguin :: Picture
 penguin =

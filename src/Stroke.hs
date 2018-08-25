@@ -60,6 +60,7 @@ data StrokeStyle = StrokeStyle
   , joinType :: JoinType
   , capType :: CapType
   , ellipseTolerance :: Double
+  , joinTolerance :: Double
   }
   deriving (Show, Eq, Ord, Read)
 
@@ -106,9 +107,11 @@ buildCap ss tang center =
 
     
 
+-- takes a tolerance
 buildJoin :: StrokeStyle -> Vector -> Vector -> Point -> ([PathSegment],Point)
 buildJoin ss norm1 norm2 center = 
   let
+    tol = joinTolerance ss
     dist = strokeDistance ss
     join = joinType ss
     --cap = capType ss
@@ -122,9 +125,9 @@ buildJoin ss norm1 norm2 center =
     p1 = center +. vec1
     p2 = center +. vec2
   in 
-    if c==0 -- norm1 and norm2 are either parallel (join is easy) or antiparallel (cusp, oh shit)
+    if abs c < tol -- norm1 and norm2 are either parallel (join is easy) or antiparallel (cusp, oh shit)
     then
-      if norm1 == norm2 -- parallel join, no need for any joining
+      if vectorNorm (norm1 -. norm2) < tol -- parallel join, no need for any joining
       then 
         ([], p1)
       else -- antiparallel, i.e. cusp, right now I'll join with the current cap style
@@ -252,7 +255,7 @@ strokeExterior ss@StrokeStyle{strokeDistance = dist} cont@Contour{contourSegs=cs
     makeContour strokecs
 
 strokeTestS :: StrokeStyle
-strokeTestS = StrokeStyle 1 (BezierJoin 0) (squareCap) 1e-7
+strokeTestS = StrokeStyle 1 (RoundJoin) (squareCap) 1e-7 1e-7
 
 
 strokeTestC :: Contour
