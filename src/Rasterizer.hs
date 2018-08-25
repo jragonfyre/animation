@@ -328,7 +328,7 @@ scanRasterizer (nx,ny) box cp =
       putStrLn "relSegs"
       putStrLn $ show relSegs
       putStrLn "critPts"
-      --putStrLn $ show critPts
+      putStrLn $ show critPts
       putStrLn "odd crit pts"
       putStrLn $ show $ V.filter (odd . length) critPts
       putStrLn "rows"

@@ -132,8 +132,8 @@ buildParametrizedContour pp pstep =
     makeContour (fmap (PathSeg . p) ts)
 
 
-buildBez2ApproxPC1 :: ParamContour1 -> Double -> Contour
-buildBez2ApproxPC1 pp1 pstep = 
+buildBez2ApproxPC1 :: Double -> ParamContour1 -> Double -> Contour
+buildBez2ApproxPC1 tol pp1 pstep = 
   let
     pp = pp1^.param
     pd = pp1^.deriv
@@ -147,6 +147,7 @@ buildBez2ApproxPC1 pp1 pstep =
     edrvs = V.imap (\i _ -> (V.!) sdrvs ((i+1)`mod`n)) sdrvs
     -- st + t sdrv = ed + s edrv -- want to solve
     mats = V.zipWith (makeMatrix) sdrvs edrvs
+    dets = V.map det mats
     -- uhoh what if there's no inversion xD lol, e.g. at a cusp or something, or when things are parallel
     -- if things are parallel, we could just use a line in the path. look into it later
     -- TODO
@@ -156,9 +157,12 @@ buildBez2ApproxPC1 pp1 pstep =
     tvals = V.map (negate . (^.x)) solns
     cpts = V.zipWith (+.) sts (V.zipWith (*.) tvals sdrvs)
     bezs = V.zipWith PathBez2 sts cpts
+    lins = V.map PathSeg sts
   in
-    Contour bezs
+    Contour $ V.zipWith3 (\d b l -> if abs d < tol then l else b) dets bezs lins
 
+{-
+--too weak. The approximation doesn't properly work
 buildBez3ApproxPC1 :: ParamContour1 -> Double -> Contour
 buildBez3ApproxPC1 pp1 pstep = 
   let
@@ -177,6 +181,7 @@ buildBez3ApproxPC1 pp1 pstep =
     bezs = V.zipWith3 PathBez3 sts scpts ecpts
   in
     Contour bezs
+-}
 
 --buildBez2ApproxPP1 :: ParamPath1 -> Double -> Path
 
