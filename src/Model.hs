@@ -10,6 +10,7 @@ module Model where
   --) where
 
 import Geometry
+import Geometry.Region
 import Control.Lens ((^.))
 import Control.Lens.Iso (from)
 

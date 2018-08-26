@@ -49,6 +49,10 @@ data ParamPath1 = ParamPath1
 makeFields ''ParamPath0
 makeFields ''ParamPath1
 
+makeGraph :: (Double,Double) -> (Double -> Double) -> ParamPath0
+makeGraph rg f = 
+  ParamPath0 (\t -> makePoint t (f t)) rg
+
 isNormalizedPP0 :: ParamPath0 -> Bool
 isNormalizedPP0 = (==(0,1)) . (^.range)
 

@@ -25,6 +25,8 @@ import Data.Array.Repa.Stencil.Dim2
 import Geometry
 import Geometry.PathBuilder (glyphQ)
 
+import Geometry.Region
+
 import Scanner
 
 import Model

@@ -30,16 +30,7 @@
     (Update: DONE, don't remember what the bug was)
 15. Add more types of splines. E.g. NURBS. (Could then unify the other types of curves under nurbs maybe?,
     though perhaps more efficient rn)
-16. Fix the streaking showing up in the Bezier2 approximation of the spirograph contour given by (1,100,30,20)
-17. Huge error has been introduced in the RoundJoin join type somehow.
-    Even the ellipse mentioned in 14 doesn't render correctly with RoundJoin on
-    Same for the spirograph mentioned in 16
-18. Something super weird is going on with approximating the spirograph in 16 with Bezier curves. We're getting
-    weird "cuts"
-    The glitch appears to be in the stroking engine, since the glitch doesn't appear when filling the 
-    approximated spirograph curve, only when filling the stroked approximated spirograph curve.
-    Even shows up when stroking the Q.
-    Part of the issue is not taking tolerances in the stroke engine. Fixed the ellipse glitch by 
-    using a tolerance in the join building function.
-    Also completely fixed the issue in the spirograph rendering! :D
-    (Side note, fixes the streaking)
+    I understand more now. B-splines are basis splines. 
+16. Never compare floats for equality. Pretty urgent. This is a huge source of bugs. Just fixed one in the 
+    build join function causing massive streaking and glitching.
+17. Glitch when stroking sharp interior bends, see Q with a stroke distance of 40.

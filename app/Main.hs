@@ -1,6 +1,8 @@
 module Main where
 
 import Geometry
+import Geometry.Region
+import Geometry.Curve
 import Model
 import Stroke
 import Picture
@@ -42,8 +44,8 @@ toPoint regionSize hdimen (i,j) =
 --rotate :: Double -> Point -> Point
 --rotate theta = under (from ptAsPair) (\(x,y) -> (x*cos theta - y*sin theta, x*sin theta + y * cos theta))
 
-func :: Point -> Double 
-func pt =
+quartFunc :: Point -> Double 
+quartFunc pt =
   let
     (x,y) = pt^.ptAsPair
   in
@@ -51,7 +53,7 @@ func pt =
 
 
 regionFunc :: Double -> Region
-regionFunc tol = implicitRegion func (withinTolerance tol)
+regionFunc tol = implicitRegion quartFunc (withinTolerance tol)
 
 --drawableImage :: (Drawable d) => DrawData d -> d -> Int -> Double -> Image RPU RGB Double
 --drawableImage 
@@ -459,6 +461,19 @@ spiroPicture fo fi =
   [ fill fi $ stroke strokeTestS{strokeDistance=1} spiroPath
   , fill fo $ stroke strokeTestS{strokeDistance=3} spiroPath
   ]
+
+plotPicture :: (Filling a, Filling b) => a -> b -> Double -> ParamPath0 -> Double -> Picture
+plotPicture fgr fax sw pp pstep = 
+  let
+    str = strokeTestS{strokeDistance=sw/2}
+    pth = buildParametrizedPath pp pstep
+    bbox = bounds pth
+    xax = makePath [PathSeg $ makePoint (boxLeft bbox) 0] (makePoint (boxRight bbox) 0)
+    yax = makePath [PathSeg $ makePoint 0 (boxBottom bbox)] (makePoint 0 (boxTop bbox))
+  in
+    [ fill fgr $ stroke str pth
+    , fill fax $ stroke str [xax,yax]
+    ]
 
 -- assumes rext > rint > rpen
 spiroBoundingBox :: (Double, Double, Double) -> Box

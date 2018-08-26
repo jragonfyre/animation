@@ -156,6 +156,12 @@ makeContour = Contour . V.fromList
 newtype Path = Path { pathSegs :: (Vector PathSegment, Point) }
   deriving (Show, Eq, Ord, Read)
 
+instance GBounded Path where
+  bounds = bounds . V.toList . toWholeSegsP
+
+instance Geometric Path where
+  transform aff Path{pathSegs = (ps,cap)} = Path (fmap (transform aff) ps, transform aff cap)
+
 makePath :: [PathSegment] -> Point -> Path
 makePath ps cap = Path (V.fromList ps, cap)
 
