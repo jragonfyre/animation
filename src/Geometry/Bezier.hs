@@ -12,7 +12,7 @@ import Geometry.Curve.Types
 import Geometry.Region
 import Geometry.Affine
 
-import Control.Lens ((^.), from, (&),(.~))
+import Control.Lens ((^.), from, (&), (.~), over, _1)
 
 import Utils
 
@@ -38,6 +38,15 @@ computeBez3Coeffs (s,c,d,e) = (-s+3*c-3*d+e,3*s-6*c+3*d,-3*s+3*c,s)
 
 type WPoint = (Point,Double)
 
+transformWPoint :: Affine -> WPoint -> WPoint
+transformWPoint aff = over _1 (transform aff)
+
+{-
+instance Geometric (Point,Double) where
+  -- not sure if this is a good definition
+  transform aff (pt,w) = (transform aff pt,w)
+-}
+
 data RBezier2 = RBezier2
   { rstart2 :: WPoint -- point and weight (NOT HOMOGENEOUS COORDINATES!)
   , rcontrol2 :: WPoint
@@ -45,7 +54,7 @@ data RBezier2 = RBezier2
   , rxCoeffs2 :: (Double,Double,Double)
   , ryCoeffs2 :: (Double,Double,Double)
   , rzCoeffs2 :: (Double,Double,Double)
-  , rboundingBox2 :: Box
+  , rboundingBox2 :: Box -- this is only valid when the weights are positive
   }
   deriving (Read,Show,Eq,Ord)
 

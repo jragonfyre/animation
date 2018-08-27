@@ -14,6 +14,7 @@ module Scanner
   ) where
 
 import Geometry
+import Polynomial
 import PolynomialSolver
 
 import Control.Lens ((^.), each, (&), (%~))
@@ -36,6 +37,8 @@ solveWPSeg :: Double -> WholePathSegment -> Double -> [(Double,Double,Sign)]
 solveWPSeg tol (WPathSeg seg) = solveSegment tol seg
 solveWPSeg tol (WPathBez2 bez) = solveBezier2 tol bez
 solveWPSeg tol (WPathBez3 bez) = solveBezier3 tol bez
+solveWPSeg tol (WPathRBez2 rbez) = solveRBezier2 tol rbez
+solveWPSeg tol (WPathRBez3 rbez) = solveRBezier3 tol rbez
 solveWPSeg tol (WPathEArc earc) = solveEArc tol earc
 
 -- the second double is the absolute value of the x coordinate of the normal to the curve at the point.
@@ -108,31 +111,77 @@ solveBezier2 tol bez y =
               t = t1
               ta=t1-2*tol
               tb=t1+2*tol
-              dx = derivx t1
-              x = computex t
-              epsilon = tol * dx/(abs dx)
-              xa = computex ta
-              xb = computex tb
             in
               mapMaybe isValid [ta,tb]
-              {-
-              if -tol <= t && t <= 1+tol
-              then
-                case () of 
-                  _ | b2 < 0  -> [(t,x-epsilon,Plus),(t,x+epsilon,Minus)]
-                    | b2 > 0  -> [(t,x-epsilon,Minus),(t,x+epsilon,Plus)]
-                    | b2 == 0 -> []
-              else
-                []
-              -}
           else
             mapMaybe isValid ts 
-            --zip3 ts (map computex ts) (map (signOf . derivy) ts)
         _ -> 
           mapMaybe isValid ts
     else
       []
 
+
+solveRBezier2 :: Double -> RBezier2 -> Double -> [(Double, Double, Sign)]
+solveRBezier2 tol rbez y =
+  let
+    as = rxCoeffs2 rbez
+    ds = ryCoeffs2 rbez
+    cs = rzCoeffs2 rbez
+    (b2,b1,b0) = ds-.y*.cs
+    -- TODO fix the tolerance stuff
+    ts = 
+      if abs b2 < tol
+      then 
+        if abs b1 < tol
+        then 
+          []
+        else
+          [(-b0)/b1]
+      else
+        solveQuadratic (b2,b1,b0)
+    computexh = evalQuadratic as 
+    computeyh = evalQuadratic ds
+    computeyhp = evalLinear (derivCoeffsQuadratic ds)
+    computezh = evalQuadratic cs
+    computezhp = evalLinear (derivCoeffsQuadratic cs)
+    computex t = computexh t / computezh t
+    derivy t = 
+      let
+        yh = computeyh t
+        yhp = computeyhp t
+        zh = computezh t
+        zhp = computezhp t
+      in
+        (yhp/zh) - ((yh*zhp)/(zh^2))
+    isValid t = 
+      if -tol <= t && t <= 1+tol
+      then 
+        Just (t,computex t,signOf (derivy t))
+      else
+        Nothing
+  in
+    if (withinY (rboundingBox2 rbez) y)
+    then 
+      case ts of 
+        [] ->
+          []
+        [t1,t2] ->
+          if t1 == t2
+          then
+            let 
+              t = t1
+              ta=t1-2*tol
+              tb=t1+2*tol
+            in
+              mapMaybe isValid [ta,tb]
+          else
+            mapMaybe isValid ts 
+        _ -> 
+          mapMaybe isValid ts
+    else
+      []
+
+-- doesn't properly handle repeated roots!
 solveBezier3 :: Double -> Bezier3 -> Double -> [(Double,Double,Sign)]
 solveBezier3 tol bez y =
   let
@@ -162,6 +211,54 @@ solveBezier3 tol bez y =
         Nothing
   in
     if (withinY (boundingBox3 bez) y)
+    then 
+      mapMaybe isValid ts
+    else
+      []
+
+solveRBezier3 :: Double -> RBezier3 -> Double -> [(Double,Double,Sign)]
+solveRBezier3 tol rbez y =
+  let
+    as = rxCoeffs3 rbez
+    ds = ryCoeffs3 rbez
+    cs = rzCoeffs3 rbez
+    (b3,b2,b1,b0) = ds -. y*.cs
+    ts = 
+      if abs b3 < tol
+      then
+        if abs b2 < tol
+        then
+          if abs b1 < tol
+          then
+            []
+          else
+            [(-b0)/b1]
+        else
+          solveQuadratic (b2,b1,b0)
+      else
+        solveCubic (b3,b2,b1,b0)
+    computexh = evalCubic as 
+    computeyh = evalCubic ds
+    computeyhp = evalQuadratic (derivCoeffsCubic ds)
+    computezh = evalCubic cs
+    computezhp = evalQuadratic (derivCoeffsCubic cs)
+    computex t = computexh t / computezh t
+    derivy t = 
+      let
+        yh = computeyh t
+        yhp = computeyhp t
+        zh = computezh t
+        zhp = computezhp t
+      in
+        (yhp/zh) - ((yh*zhp)/(zh^2))
+    isValid t = 
+      if -tol <= t && t <= 1+tol
+      then 
+        Just (t,computex t,signOf (derivy t))
+      else
+        Nothing
+  in
+    if (withinY (rboundingBox3 rbez) y)
     then 
       mapMaybe isValid ts
     else

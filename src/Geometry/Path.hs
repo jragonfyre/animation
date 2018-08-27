@@ -28,6 +28,8 @@ data PathSegment
   = PathSeg !Point
   | PathBez2 !Point !Point
   | PathBez3 !Point !Point !Point
+  | PathRBez2 !WPoint !WPoint
+  | PathRBez3 !WPoint !WPoint !WPoint
   | PathEArc !Point !Matrix !Bool !Bool !Double
   deriving (Show, Eq, Ord, Read)
 
@@ -41,6 +43,8 @@ instance Geometric PathSegment where
   transform aff (PathSeg pt) = PathSeg (transform aff pt)
   transform aff (PathBez2 s c) = PathBez2 (transform aff s) (transform aff c)
   transform aff (PathBez3 s c d) = PathBez3 (transform aff s) (transform aff c) (transform aff d)
+  transform aff (PathRBez2 s c) = PathRBez2 (transformWPoint aff s) (transformWPoint aff c)
+  transform aff (PathRBez3 s c d) = PathRBez3 (transformWPoint aff s) (transformWPoint aff c) (transformWPoint aff d)
   transform aff (PathEArc s mat fA fS tol) =
     let
       (m,_) = aff^.affAsPair
@@ -56,12 +60,16 @@ pSegStart :: PathSegment -> Point
 pSegStart (PathSeg s) = s
 pSegStart (PathBez2 s _) = s
 pSegStart (PathBez3 s _ _) = s
+pSegStart (PathRBez2 (s,sw) _) = s
+pSegStart (PathRBez3 (s,sw) _ _) = s
 pSegStart (PathEArc s _ _ _ _) = s
 
 data WholePathSegment 
   = WPathSeg !Segment
   | WPathBez2 !Bezier2
   | WPathBez3 !Bezier3
+  | WPathRBez2 !RBezier2
+  | WPathRBez3 !RBezier3
   | WPathEArc !EllipticalArc
   deriving (Show, Eq, Ord, Read)
 
@@ -69,12 +77,16 @@ instance Geometric WholePathSegment where
   transform aff (WPathSeg seg) = WPathSeg (transform aff seg)
   transform aff (WPathBez2 seg) = WPathBez2 (transform aff seg)
   transform aff (WPathBez3 seg) = WPathBez3 (transform aff seg)
+  transform aff (WPathRBez2 seg) = WPathRBez2 (transform aff seg)
+  transform aff (WPathRBez3 seg) = WPathRBez3 (transform aff seg)
   transform aff (WPathEArc seg) = WPathEArc (transform aff seg)
 
 evaluate :: WholePathSegment -> Double -> Point
 evaluate (WPathSeg seg) = segmentParametrization seg
 evaluate (WPathBez2 bez) = parametrization2 bez
 evaluate (WPathBez3 bez) = parametrization3 bez
+evaluate (WPathRBez2 rbez) = rparametrization2 rbez
+evaluate (WPathRBez3 rbez) = rparametrization3 rbez
 evaluate (WPathEArc earc) = parametrizeEArc earc
 
 derivative :: WholePathSegment -> Double -> T.Vector
@@ -92,6 +104,8 @@ derivative (WPathBez3 bez) t =
     (b3,b2,b1,_) = yCoeffs3 bez
   in
     makeVector (t*(t*3*a3+2*a2)+a1) (t*(t*3*b3+2*b2)+b1)
+derivative (WPathRBez2 rbez) t = rderivative2 rbez t
+derivative (WPathRBez3 rbez) t = rderivative3 rbez t
 derivative (WPathEArc earc) t = derivativeEArc earc t
 
 pathTangent :: WholePathSegment -> Double -> T.Vector
@@ -100,11 +114,20 @@ pathTangent wpseg = normalize . derivative wpseg
 pathNormal :: WholePathSegment -> Double -> T.Vector
 pathNormal wpseg = perpendicular . pathTangent wpseg
 
+reverseSegment :: PathSegment -> Point -> PathSegment
+reverseSegment (PathSeg _) rs = PathSeg rs
+reverseSegment (PathBez2 _ c) rs = PathBez2 rs c
+reverseSegment (PathBez3 _ c d) rs = PathBez3 rs d c
+reverseSegment (PathRBez2 (_,sw) (c,cw)) rs = PathRBez2 (rs,1/sw) (c,cw/sw)
+reverseSegment (PathRBez3 (_,sw) (c,cw) (d,dw)) rs = PathRBez3 (rs,1/sw) (d,dw/sw) (c,cw/sw)
+reverseSegment (PathEArc _ mat fA fS tol) rs = PathEArc rs mat fA (not fS) tol
 
 wpSegBoundingBox :: WholePathSegment -> Box
 wpSegBoundingBox (WPathSeg seg) = bounds seg
 wpSegBoundingBox (WPathBez2 bez) = bounds bez
 wpSegBoundingBox (WPathBez3 bez) = bounds bez
+wpSegBoundingBox (WPathRBez2 rbez) = bounds rbez
+wpSegBoundingBox (WPathRBez3 rbez) = bounds rbez
 wpSegBoundingBox (WPathEArc earc) = bounds earc
 
 instance GBounded WholePathSegment where
@@ -114,6 +137,8 @@ toWholeSeg :: PathSegment -> Point -> WholePathSegment
 toWholeSeg (PathSeg p1) = WPathSeg . makeSegment p1
 toWholeSeg (PathBez2 s c) = WPathBez2 . makeBezier2 s c
 toWholeSeg (PathBez3 s c d) = WPathBez3 . makeBezier3 s c d
+toWholeSeg (PathRBez2 s c) = WPathRBez2 . makeRBezier2 s c . (,1)
+toWholeSeg (PathRBez3 s c d) = WPathRBez3 . makeRBezier3 s c d . (,1)
 toWholeSeg (PathEArc s mat fA fS tol) = WPathEArc . makeEArcMatrixEndpoints s (mat,tol) fA fS
 
 getVertexC :: Int -> Contour -> Point
@@ -247,20 +272,14 @@ reverseP Path{pathSegs=(ps,cap)} = Path (V.reverse $ V.imap f ps, (pSegStart $ (
   where
     l = V.length ps
     reverseStart i = if i == l-1 then cap else (pSegStart $ ps!(i+1))
-    f i (PathSeg _) = PathSeg (reverseStart i)
-    f i (PathBez2 _ c) = PathBez2 (reverseStart i) c
-    f i (PathBez3 _ c d) = PathBez3 (reverseStart i) d c
-    f i (PathEArc _ mat fA fS tol) = PathEArc (reverseStart i) mat fA (not fS) tol
+    f i seg = reverseSegment seg (reverseStart i)
 
 reverseC :: Contour -> Contour
 reverseC Contour{contourSegs=cs} = Contour . V.reverse $ V.imap f cs
   where
     l = V.length cs
     reverseStart i = pSegStart $ cs!((i+1) `mod` l)
-    f i (PathSeg _) = PathSeg (reverseStart i)
-    f i (PathBez2 _ c) = PathBez2 (reverseStart i) c
-    f i (PathBez3 _ c d) = PathBez3 (reverseStart i) d c
-    f i (PathEArc _ mat fA fS tol) = PathEArc (reverseStart i) mat fA (not fS) tol
+    f i seg = reverseSegment seg (reverseStart i)
 
 --toWholeSegsOP :: Path -> Vector WholePathSegment
 

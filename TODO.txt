@@ -34,3 +34,18 @@
 16. Never compare floats for equality. Pretty urgent. This is a huge source of bugs. Just fixed one in the 
     build join function causing massive streaking and glitching.
 17. Glitch when stroking sharp interior bends, see Q with a stroke distance of 40.
+18. Successfully added Rational Bezier curves. (DONE)
+19. Add implicit polynomial (I mean polynomial in x) contours (i.e. the level set of a differentiable 
+    function in x and y which is at most a cubic polynomial in x when y is fixed.)
+    Then we could solve for x, and also compute the normal to the contour at any given point (since we know the
+    gradient). Thus the scan rasterizer could rasterize such a contour. Need to be careful with how we define
+    orientation, but I think it could work. This would be a solution to 2 above, as well as being sooooo much
+    more general. Could do soooo much cool shit with this. 
+20. Related to 19. Add general parametric paths which are polynomial in y. Like fun fact, the scan rasterizer
+    doesn't give a shit what x is doing as long as we can solve for y, and take appropriate derivatives.
+21. Refactor everything. Like the path abstraction has gotten a bit complicated, since there are so many
+    different kinds of paths. Might want to just get rid of non-rational Bezier curves, since they are 
+    entirely subsumed by rational Bezier curves
+22. Allow rendering of NURBS curves of degree up to 3 by splitting into rational beziers
+23. Possibly reimplement circular/elliptical arcs in terms of NURBS given 22/18
+    Related to 21.

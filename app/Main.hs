@@ -12,9 +12,9 @@ import qualified Graphics.Image as I
 import Graphics.Image (RPU,RGB,Image)
 import Control.Monad (void)
 import Control.Lens ((^.),to,re)
-import Control.Lens.Iso (under,from)
+import Control.Lens.Iso (from)
 
-import Geometry.Region.Types
+--import Geometry.Region.Types
 
 import Rasterizer
 
@@ -240,7 +240,7 @@ segmentImage falloff width dimen t =
         rot = rotate t
         pt = rot *. (toPoint 2.1 hdimen (i,j))
         pixRed = I.PixelRGB 1 0 0
-        pixGreen = I.PixelRGB 0 1 0
+        --pixGreen = I.PixelRGB 0 1 0
         pixBlue = I.PixelRGB 0 0 1
         d1 = (circ1m^.to (circleCurve 0.1).distance) pt
         d2 = (circ2m^.to (circleCurve 0.1).distance) pt
@@ -504,21 +504,21 @@ concreteAnim = spiroAnim 150
   (\fnum ->
       (15/20,(200,10+fnum,fnum))
   )
-  (\fnum ->
+  (\_ ->
       (circularGaussian (makePoint 0 0) 100 (LRGBA 1 0.5 0.3 1) (LRGBA 1 0.26 0 1))
   )
-  (\fnum ->
+  (\_ ->
       (LRGBA 0 0 0 0.75)
   )
 
 main :: IO ()
 main = do
-  let purpleFill = (solidFill $ LRGBA 0.5 0.2 0.7 1.0)
+  --let purpleFill = (solidFill $ LRGBA 0.5 0.2 0.7 1.0)
   font <- loadFontFile "../fonts/Caudex/Caudex-Regular.ttf"
   case font of
     Left err -> 
       putStrLn ("Error: "++err)
-    Right ft -> do
+    Right _ -> do--ft -> do
       {-
       sequence_ $ map (\char -> 
         writeGlyph 500 ft char purpleFill)

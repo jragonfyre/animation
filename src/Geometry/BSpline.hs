@@ -36,10 +36,12 @@ val = runST test
 -- cnvComb p1 p2 1 = p2
 
 type ConvexCombinator a = a -> a -> Double -> a
+-- yes, this is a pun. it is not supposed to be scalar... jk Scaler was a bad name
+type Scaling a = Double -> a -> a
+
 type ControlPoints a = (ConvexCombinator a, Vector a)
 
-type WControlPoints a = (ConvexCombinator a, Vector (a,Double))
-
+type WControlPoints a = (Scaling a, ConvexCombinator a, Vector (a,Double))
 
 convCombOfVecs :: (Summable a a a, Multiplicable Double a a) => a -> a -> Double -> a
 convCombOfVecs p1 p2 t = (1-t)*.p1 +. t*.p2
@@ -49,7 +51,7 @@ makeControlPoints :: (Summable a a a, Multiplicable Double a a) => Vector a -> C
 makeControlPoints = (convCombOfVecs,)
 
 makeWControlPoints :: (Summable a a a, Multiplicable Double a a) => Vector (a,Double) -> WControlPoints a
-makeWControlPoints = (convCombOfVecs,)
+makeWControlPoints = ((*.),convCombOfVecs,)
 
 -- seems like I have to put this out here, in order to put this type signature on it??? Wtf is going on even?
 cbsMainLoop :: Vector Double -> Int -> Vector Double -> Double -> Int -> Int -> Double
@@ -81,32 +83,6 @@ cbsMainLoopGen knots d (cnvComb,cpts) x k p = runST $ do
 
 computeBSpline :: Vector Double -> Int -> Vector Double -> Double -> Double
 computeBSpline knots d cpts x = 
-      let 
-        k = kp1-1
-        p = d-1
-      in
-        if k-p >= 0 && kp1+p < (length knots)
-        then
-          -- de Boor's algorithm, straight from Wiki
-          -- implemented with MVectors and Control.Monad.ST
-          cbsMainLoop knots d cpts x k p
-        else
-          0
-
-computeBSplineGen :: Vector Double -> Int -> ControlPoints a -> Double -> a
-computeBSplineGen knots d cpts x = 
-  case V.findIndex (> x) knots of
-    Nothing -> 
-      0
-    Just kp1 ->
-      let 
-        k = kp1-1
-        p = d-1
-      in
-        if k-p >= 0 && kp1+p < (length knots)
-        then
-          -- de Boor's algorithm, straight from Wiki
-       
   case V.findIndex (> x) knots of
     Nothing -> 
       0
@@ -140,5 +116,15 @@ computeBSplineGen knots d cpts x =
           Just $ cbsMainLoopGen knots d cpts x k p
         else
           Nothing
+
+computeRBSpline :: Vector Double -> Int -> WControlPoints a -> Double -> Maybe a
+computeRBSpline knots d (scaler,convComb,wpts) x = 
+  let
+    wts = V.map snd wpts
+    spts = V.map (uncurry (flip scaler)) wpts
+    w = computeBSpline knots d wts x
+    mevalPt = computeBSplineGen knots d (convComb,spts) x
+  in
+    fmap (scaler (1/w)) mevalPt
 
 

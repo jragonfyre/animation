@@ -105,7 +105,6 @@ buildCap ss tang center =
       RoundCap ->
         ([makeCircleSegment p1 dist True (ellipseTolerance ss)],p2)
 
-    
 
 -- takes a tolerance
 buildJoin :: StrokeStyle -> Vector -> Vector -> Point -> ([PathSegment],Point)
@@ -144,7 +143,7 @@ buildJoin ss norm1 norm2 center =
         if c > 0 -- norm2 is within +180 degrees of norm1, so this is an exterior join
         then
           case join of
-            BevelJoin s -> 
+            BevelJoin s -> -- ignore scaling for now
               ([PathSeg p1], p2)
             MiterJoin s -> -- ignore scaling for now.
               ([PathSeg p1, PathSeg pc],p2)
@@ -162,7 +161,7 @@ buildJoin ss norm1 norm2 center =
 -- plus the distance 
 parallelSegment :: Double -> WholePathSegment -> Point -> Point -> [PathSegment]
 parallelSegment _ (WPathSeg _) s _ = [PathSeg s]
-parallelSegment d (WPathBez2 bez) s e =
+parallelSegment d (WPathBez2 bez) s _ =
   let
     ps = start2 bez
     pc = control2 bez
@@ -183,7 +182,7 @@ parallelSegment d (WPathBez2 bez) s e =
           -- this *really* doesn't work near a cusp xP
   in
     [PathBez2 s (pc+.cVec)]
-parallelSegment d (WPathBez3 bez) s e =
+parallelSegment d (WPathBez3 bez) s _ =
   let
     ps = start3 bez
     pc = stCont3 bez
@@ -217,19 +216,77 @@ parallelSegment d (WPathBez3 bez) s e =
           -- this *really* doesn't work near a cusp xP still xP
   in
     [PathBez3 s (pc+.cVec1) (pd+.cVec2)]
+-- THIS IS SOOOO SKETCHY XD TODO
+parallelSegment d (WPathRBez2 rbez) s _ =
+  let
+    (ps,sw) = rstart2 rbez
+    (pc,cw) = rcontrol2 rbez
+    (pe,ew) = rend2 rbez
+    norm1 = perpendicular . normalize $ pc -. ps
+    norm2 = perpendicular . normalize $ pe -. pc
+    mat = transpose $ makeMatrix norm1 norm2
+    c = det mat -- norm1 `cross` norm2 
+    -- (these are equal anyway by definition, so might as well cut out a step)
+    inv = invertMatrix mat
+    cVec = 
+      if c /= 0
+      then inv *. (makeVector d d)
+      else
+        if norm1 == norm2
+        then d *. norm1
+        else d *. (perpendicular norm2)
+          -- this *really* doesn't work near a cusp xP
+  in
+    [PathRBez2 (s,sw/ew) (pc+.cVec,cw/ew)]
+-- THIS IS SOOOO SKETCHY XD TODO
+parallelSegment d (WPathRBez3 rbez) s _ =
+  let
+    (ps,sw) = rstart3 rbez
+    (pc,cw) = rstCont3 rbez
+    (pd,dw) = rendCont3 rbez
+    (pe,ew) = rend3 rbez
+    norm1 = perpendicular . normalize $ pc -. ps
+    norm2 = perpendicular . normalize $ pd -. pc
+    norm3 = perpendicular . normalize $ pe -. pd
+    dVec = makeVector d d
+    mat1 = transpose $ makeMatrix norm1 norm2
+    c1 = det mat1 -- norm1 `cross` norm2 
+    inv1 = invertMatrix mat1
+    cVec1 = 
+      if c1 /= 0
+      then inv1 *. dVec
+      else
+        if norm1 == norm2
+        then d *. norm1
+        else d *. (perpendicular norm2)
+          -- this *really* doesn't work near a cusp xP again
+    mat2 = transpose $ makeMatrix norm2 norm3
+    c2 = det mat2 -- norm2 `cross` norm3 
+    inv2 = invertMatrix mat2
+    cVec2 = 
+      if c2 /= 0
+      then inv2 *. dVec
+      else
+        if norm2 == norm3
+        then d *. norm2
+        else d *. (perpendicular norm3)
+          -- this *really* doesn't work near a cusp xP still xP
+  in
+    [PathRBez3 (s,sw/ew) (pc+.cVec1,cw/ew) (pd+.cVec2,dw/ew)]
 -- lazy parallel elliptical arc
-parallelSegment d (WPathEArc earc) s e = 
+parallelSegment d (WPathEArc earc) s _ = 
   let
     ell = earc^.ellipse
     (_,tol) = ell^.matrix
     rx = ell^.radX
     ry = ell^.radY
     rphi = ell^.phi
-    cent = ell^.center
+    --cent = ell^.center
     delt = earc^.delta
     dist = if delt >= 0 then d else (-d)
   in
     [PathEArc s (ellipseRadiiAndRotationToMatrix (rx+dist,ry+dist,rphi)) (abs delt >= pi) (delt >= 0) tol]
+
 
 
 -- IT WORKS!!!
@@ -283,7 +340,7 @@ strokeContour s c = (strokeExterior s $ reverseC c, strokeExterior s c)
 -- think I need to somehow unify paths with contours.
 -- they behave basically the same for a lot of applications
 strokePathExterior :: StrokeStyle -> Point -> Point -> Path -> Path
-strokePathExterior ss@StrokeStyle{strokeDistance = dist} st end path@Path{pathSegs=(ps,cap)} = 
+strokePathExterior ss@StrokeStyle{strokeDistance = dist} st end path@Path{pathSegs=(ps,_)} = 
   let
     --csegL = V.toList cs
     ws = toWholeSegsP path
@@ -309,13 +366,13 @@ strokePathExterior ss@StrokeStyle{strokeDistance = dist} st end path@Path{pathSe
 strokePath :: StrokeStyle -> Path -> Contour
 strokePath ss p =
   let
-    (ps,cap) = pathSegs p
+    (ps,_) = pathSegs p
     seg1 = getWholeSegmentP 0 p
     segn = getWholeSegmentP ((length ps)-1) p
     begCap = buildCap ss (negify . pathTangent seg1 $ 0.0) (evaluate seg1 0.0)
     endCap = buildCap ss (pathTangent segn 1.0) (evaluate segn 1.0)
-    p1@Path{pathSegs=(ps1,_)} = strokePathExterior ss (lPathEnd begCap) (lPathStart endCap) p
-    p2@Path{pathSegs=(ps2,_)} = strokePathExterior ss (lPathEnd endCap) (lPathStart begCap) $ reverseP p
+    Path{pathSegs=(ps1,_)} = strokePathExterior ss (lPathEnd begCap) (lPathStart endCap) p
+    Path{pathSegs=(ps2,_)} = strokePathExterior ss (lPathEnd endCap) (lPathStart begCap) $ reverseP p
   in
     Contour $ (V.concat) [ps1, V.fromList $ lPathSegs endCap, ps2, V.fromList $ lPathSegs begCap]
     {-

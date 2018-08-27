@@ -12,7 +12,7 @@ module Rasterizer
 
 import qualified Data.Array.Repa as R
 import Data.Array.Repa (D, DIM2, Array, (:.) (..), Z(..), fromFunction, ix2, (!), ix1, Source, Structured (..))
-import Data.Array.Repa.Repr.Vector as R
+--import Data.Array.Repa.Repr.Vector as R
 
 import qualified Data.Vector as V
 
@@ -34,9 +34,9 @@ import Picture hiding (orange)
 
 import Utils
 
-import Control.Lens ((^.),from,(%~),_1,(&),to)
+import Control.Lens ((^.),from) --,(%~),_1,(&),to)
 
-import Control.DeepSeq (deepseq)
+--import Control.DeepSeq (deepseq)
 
 import qualified Graphics.Image as I
 import Graphics.Image (RPU,RGB,Image)
@@ -131,14 +131,16 @@ rasterizeCircle (nx,ny) box circ =
     (center,radius) = circ^.circAsPair
     (cx,cy) = center^.ptAsPair
     (width,height) = box^.dimensions.vecAsPair
-    (lx,ly) = box^.corner.ptAsPair
+    --(lx,ly) = box^.corner.ptAsPair
     pixWidth=width/fromIntegral nx
     pixHeight=height/fromIntegral ny
+    {-
     cornIxLoc 
       = \(Z:.i:.j) -> 
           (boxLeft box + fromIntegral i*pixWidth,boxTop box - fromIntegral j*pixHeight)^.from ptAsPair
+    -}
     cornxLoc = \(Z:.i) -> boxLeft box + fromIntegral i * pixWidth
-    cornyLoc = \j -> boxTop box - fromIntegral j*pixHeight
+    --cornyLoc = \j -> boxTop box - fromIntegral j*pixHeight
     ylocInv = \h -> (boxTop box - h)/pixHeight
     lower = fromFunction (ix1 (nx+1)) $ \ix -> ylocInv $ cy+(signSqrt $ radius^2-(cornxLoc ix-cx)^2)
     upper = fromFunction (ix1 (nx+1)) $ \ix -> ylocInv $ cy-(signSqrt $ radius^2-(cornxLoc ix-cx)^2)
@@ -242,12 +244,12 @@ scanRasterizer (nx,ny) box cp =
     segsbottomy = fmap (boxBottom . wpSegBoundingBox) segs
     --segsbottomy = fmap (boxBottom . wpSegBoundingBox) ssegs
     (width,height) = box^.dimensions.vecAsPair
-    (lx,ly) = box^.corner.ptAsPair
+    --(lx,ly) = box^.corner.ptAsPair
     pixWidth=width/fromIntegral nx
     pixHeight=height/fromIntegral ny
     cornxLoc = \i -> boxLeft box + fromIntegral i * pixWidth
     cornyLoc = \j -> bt - fromIntegral j*pixHeight
-    ylocInv = \h -> (bt - h)/pixHeight
+    --ylocInv = \h -> (bt - h)/pixHeight
     relevantSegsUF = \(j,prevCursegs,prevRemsegs) -> 
       let
         yv = cornyLoc j
@@ -345,7 +347,7 @@ rasterize :: (Int,Int) -> Box -> Region -> Raster D Double
 rasterize (nx,ny) box region =
   let
     (width,height) = box^.dimensions.vecAsPair
-    (lx,ly) = box^.corner.ptAsPair
+    --(lx,ly) = box^.corner.ptAsPair
     pixWidth=width/fromIntegral nx
     pixHeight=height/fromIntegral ny
     cornIxLoc 
