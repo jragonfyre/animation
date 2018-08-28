@@ -127,4 +127,7 @@ computeRBSpline knots d (scaler,convComb,wpts) x =
   in
     fmap (scaler (1/w)) mevalPt
 
+-- this number is the degree of the curve, not its order
+-- also this is almost certainly not the most efficient way to go about this, it's just the easiest :)
+--rBSplineToBeziers2 :: Vector Double -> WControlPoints Point -> [RBezier2]
 

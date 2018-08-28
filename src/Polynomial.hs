@@ -68,4 +68,82 @@ derivCoeffsCubic (a3,a2,a1,_) = (3*a3,2*a2,a1)
 derivCoeffsQuadratic :: QuadPoly -> LinPoly
 derivCoeffsQuadratic (a2,a1,_) = (2*a2,a1)
 
+-- a cubic polynomial can be specified in several ways (i.e., wrt several bases, and here they are:)
+-- t^3,t^2,t,1 -- the basis used for the functions above
+-- (1-t)^3, 3(1-t)^2t, 3(1-t)t^2, t^3 -- the Bezier basis
+{-
+I'm going to explicitly write out the matrices for the changes of bases
+Bezier to standard:
+[ [ -1,  3, -3, 1 ]
+, [  3, -6,  3, 0 ]
+, [ -3,  3,  0, 0 ]
+, [  1,  0,  0, 0 ]
+]
+side note, might want to reorder the standard basis so that this matrix is lower triangular, but w.e.,
+also this has the benefit of being symmetric, so.
+(determinant 9)
+Cofactor matrix of Bez->Std
+[ [ 0, 0, 0, 9]
+, [ 0, 0, 3, 9]
+, [ 0, 3, 6, 9]
+, [ 9, 9, 9, 9]
+]
+this is still symmetric, so the inverse is:
+
+standard to Bezier
+[ [ 0,   0,   0, 1]
+, [ 0,   0, 1/3, 1]
+, [ 0, 1/3, 2/3, 1]
+, [ 1,   1,   1, 1]
+]
+
+Similarly, for the easier quadratic case:
+Bezier to standard:
+[ [  1, -2, 1]
+, [ -2,  2, 0]
+, [  1,  0, 0]
+]
+and 
+standard to Bezier:
+[ [ 0,   0, 1 ]
+, [ 0, 1/2, 1 ]
+, [ 1,   1, 1 ]
+]
+
+-}
+
+standardToBezierBasis2 :: QuadPoly -> (Double,Double,Double)
+standardToBezierBasis2 (b2,b1,b0) = (b0,(b1/2)+b0,b2+b1+b0)
+
+standardToBezierBasis3 :: CubPoly -> (Double,Double,Double)
+standardToBezierBasis3 (b3,b2,b1,b0) = (b0,(b1/3)+b0,(b2/3)+((2/3)*b1)+b0,b3+b2+b1+b0)
+
+interpolate2 :: (Double,Double) -> (Double,Double) -> (Double,Double) -> QuadPoly
+interpolate2 (t0,p0) (t1,p1) (t2,p2) = 
+  let
+    --(t-t1)(t-t2)=t^2-(t1+t2)t+t1t2
+    e0 = (1,-t1-t2,t1*t2)
+    q0 = evalQuadratic e0 t0
+    e1 = (1,-t0-t2,t0*t2)
+    q1 = evalQuadratic e1 t1
+    e2 = (1,-t0-t1,t0*t1)
+    q2 = evalQuadratic e2 t2
+  in
+    (p0/q0)*.e0 +. (p1/q1)*.e1 +. (p2/q2)*.e2
+
+interpolate3 :: (Double,Double) -> (Double,Double) -> (Double,Double) -> (Double,Double) -> CubPoly
+interpolate3 (t0,p0) (t1,p1) (t2,p2) (t3,p3)= 
+  let
+    --(t-t1)(t-t2)(t-t3)=t^3-(t1+t2+t3)t^2+(t1t2+t2t3+t1t3)t -t1t2t3
+    e0 = (1,-t1-t2-t3,t1*t2+t1*t3+t2*t3,-t1*t2*t3)
+    q0 = evalCubic e0 t0
+    e1 = (1,-t0-t2-t3,t0*t2+t0*t3+t2*t3,-t0*t2*t3)
+    q1 = evalCubic e1 t1
+    e2 = (1,-t1-t0-t3,t1*t0+t1*t3+t0*t3,-t1*t0*t3)
+    q2 = evalCubic e2 t2
+    e3 = (1,-t0-t2-t1,t0*t2+t0*t1+t2*t1,-t0*t2*t1)
+    q3 = evalCubic e3 t3
+  in
+    (p0/q0)*.e0 +. (p1/q1)*.e1 +. (p2/q2)*.e2 +. (p3/q3)*.e3
+
 
