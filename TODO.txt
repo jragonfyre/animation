@@ -9,7 +9,7 @@
 6. Refactor the Path/Contour/ClosedPath abstraction. 
    ClosedPath isn't a great abstraction. Also it would be great to provide a more unified interface to 
    Path/Contours. It's nice to have a type level distinction between the concepts, but they also behave very 
-   similarly to most things
+   similarly for most things
 7. Fix font loading. Either edit FontyFruity to fix loading of certain fonts. Possibly the issue is properly
    checking flags for on/off curve points.
    Or write my own ttf loader. I will probably eventually write a ttf loader, since I will also want an otf
@@ -49,3 +49,8 @@
 22. Allow rendering of NURBS curves of degree up to 3 by splitting into rational beziers
 23. Possibly reimplement circular/elliptical arcs in terms of NURBS given 22/18
     Related to 21.
+24. Add NURBS contours, i.e. a NURBS with domain the circle, it has the added benefit that 
+    #knots = #control points, regardless of degree or anything, though it admittedly isn't clear how knots and
+    control points are directly related in this case. It's just that there are #knots rotations of any
+    continguous subset of the control points
+25. Add SVG loading/rendering

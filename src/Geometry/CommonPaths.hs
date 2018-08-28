@@ -194,6 +194,8 @@ controlPolygon = makeContour
   where
     controlPolyPts (PathBez2 s c) = [PathSeg s,PathSeg c]
     controlPolyPts (PathBez3 s c d) = [PathSeg s, PathSeg c,PathSeg d]
+    controlPolyPts (PathRBez2 (s,_) (c,_)) = [PathSeg s,PathSeg c]
+    controlPolyPts (PathRBez3 (s,_) (c,_) (d,_)) = [PathSeg s, PathSeg c,PathSeg d]
     controlPolyPts x = [x]
 
 
