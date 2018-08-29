@@ -118,6 +118,12 @@ standardToBezierBasis2 (b2,b1,b0) = (b0,(b1/2)+b0,b2+b1+b0)
 standardToBezierBasis3 :: CubPoly -> (Double,Double,Double,Double)
 standardToBezierBasis3 (b3,b2,b1,b0) = (b0,(b1/3)+b0,(b2/3)+((2/3)*b1)+b0,b3+b2+b1+b0)
 
+interpolate2Std :: Double -> Double -> Double -> QuadPoly
+interpolate2Std p0 p1 p2 = interpolate2 (0,p0) (1/2,p1) (1,p2)
+
+interpolate3Std :: Double -> Double -> Double -> Double -> CubPoly
+interpolate3Std p0 p1 p2 p3 = interpolate3 (0,p0) (1/3,p1) (2/3,p2) (1,p3)
+
 interpolate2 :: (Double,Double) -> (Double,Double) -> (Double,Double) -> QuadPoly
 interpolate2 (t0,p0) (t1,p1) (t2,p2) = 
   let

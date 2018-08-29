@@ -39,6 +39,12 @@ makeArcSegment s = PathEArc s . ellipseRadiiToMatrix
 makeCircleSegment :: Point -> Double -> Bool -> Double -> PathSegment
 makeCircleSegment s rad fS tol = makeArcSegment s (rad,rad,0) False fS tol
 
+makeRBez2Seg :: WPoint -> WPoint -> Double -> PathSegment
+makeRBez2Seg (s,sw) (c,cw) ew = PathRBez2 (s,sw/ew) (c,cw/ew)
+
+makeRBez3Seg :: WPoint -> WPoint -> WPoint -> Double -> PathSegment
+makeRBez3Seg (s,sw) (c,cw) (d,dw) ew = PathRBez3 (s,sw/ew) (c,cw/ew) (d,dw/ew)
+
 instance Geometric PathSegment where
   transform aff (PathSeg pt) = PathSeg (transform aff pt)
   transform aff (PathBez2 s c) = PathBez2 (transform aff s) (transform aff c)

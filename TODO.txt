@@ -25,12 +25,15 @@
     that isn't a cusp. (Do math xD)
 13. Fix antialiasing. Fixing a bug in antialiasing where overlapping contours didn't render properly
     introduced a new bug where the right side of shapes don't antialias properly.
+    (Not sure if this got fixed or not, but I'm not presently noticing issues with antialiasing.)
+    Marking: (DONE)
 14. Fix an apparent bug with stroking ellipses (though I don't have a good example,
     but it shows up with (100,50,pi/3) and a strokeWidth of 15)
     (Update: DONE, don't remember what the bug was)
 15. Add more types of splines. E.g. NURBS. (Could then unify the other types of curves under nurbs maybe?,
     though perhaps more efficient rn)
     I understand more now. B-splines are basis splines. 
+    (DONE)
 16. Never compare floats for equality. Pretty urgent. This is a huge source of bugs. Just fixed one in the 
     build join function causing massive streaking and glitching.
 17. Glitch when stroking sharp interior bends, see Q with a stroke distance of 40.
@@ -47,10 +50,16 @@
     different kinds of paths. Might want to just get rid of non-rational Bezier curves, since they are 
     entirely subsumed by rational Bezier curves
 22. Allow rendering of NURBS curves of degree up to 3 by splitting into rational beziers
+    (DONE!) Though not necessarily super efficiently (but actually I think it's pretty good, except for the 
+    wasted computation in the interpolation function and the change of basis to the Bezier basis).
 23. Possibly reimplement circular/elliptical arcs in terms of NURBS given 22/18
-    Related to 21.
+    Related to 21. Not sure abt this one?
 24. Add NURBS contours, i.e. a NURBS with domain the circle, it has the added benefit that 
     #knots = #control points, regardless of degree or anything, though it admittedly isn't clear how knots and
     control points are directly related in this case. It's just that there are #knots rotations of any
     continguous subset of the control points
 25. Add SVG loading/rendering
+26. Add conversion to/from the standard interpolation basis in Polynomial.hs
+27. Improve accuracy of bounding boxes computed for beziers/rational beziers
+28. In fact, allow negative weights (as long as it doesn't produce a weight of 0 on the interval) for 
+    rational beziers/nurbs, and allow computation of their bounding boxes 
