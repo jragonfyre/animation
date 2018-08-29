@@ -110,6 +110,57 @@ standard to Bezier:
 , [ 1,   1, 1 ]
 ]
 
+also should add a basis conversion for the standard interpolation basis:
+basis such that ei(j/n)=delta i j
+
+std2 -> interpolation2
+[ [   0,   0, 1 ]
+, [ 1/4, 1/2, 1 ]
+, [   1,   1, 1 ]
+]
+bez2 -> interpolation2
+[ [   1,   0,   0 ]
+, [ 1/4, 1/2, 1/4 ]
+, [   0,   0,   1 ]
+]
+interpolation2 -> std2
+[ [  2, -4,  2 ]
+, [ -3,  4, -1 ]
+, [  1,  0,  0 ]
+]
+interpolation2 -> bez2
+[ [    1,    0,    0 ]
+, [ -1/2,    2, -1/2 ]
+, [    0,    0,    1 ]
+]
+
+std3 -> interpolation3 
+[ [    0,   0,   0, 1 ]
+, [ 1/27, 1/9, 1/3, 1 ]
+, [ 8/27, 4/9, 2/4, 1 ]
+, [    1,   1,   1, 1 ]
+]
+bez3 -> interpolation3
+[ [    1,   0,   0,    0 ]
+, [ 8/27, 4/9, 2/9, 1/27 ]
+, [ 1/27, 2/9, 4/9, 8/27 ]
+, [    0,   0,   0,    1 ]
+]
+interpolation3 -> std3
+[ [  18/7,  27/14, -54/7,  45/14 ]
+, [  -3/7, -99/14,  72/7, -39/14 ]
+, [ -22/7,   36/7, -18/7,    4/7 ]
+, [     1,      0,     0,      0 ]
+]
+interpolation3 -> bez3
+[ [    1,    0,    0,    0 ]
+, [ -5/6,    3, -3/2,  1/3 ]
+, [  1/3, -3/2,    3, -5/6 ]
+, [    0,    0,    0,    1 ]
+]
+
+
+
 -}
 
 standardToBezierBasis2 :: QuadPoly -> (Double,Double,Double)
@@ -117,6 +168,15 @@ standardToBezierBasis2 (b2,b1,b0) = (b0,(b1/2)+b0,b2+b1+b0)
 
 standardToBezierBasis3 :: CubPoly -> (Double,Double,Double,Double)
 standardToBezierBasis3 (b3,b2,b1,b0) = (b0,(b1/3)+b0,(b2/3)+((2/3)*b1)+b0,b3+b2+b1+b0)
+
+stdToBezBasis2 = standardToBezierBasis2
+stdToBezBasis3 = standardToBezierBasis3
+
+stIntToBezBasis2 :: (Double,Double,Double) -> (Double,Double,Double)
+stIntToBezBasis2 (p0,p1,p2) = (p0,2*p1 - (p0+p2)/2,p2)
+
+stIntToBezBasis3 :: (Double,Double,Double,Double) -> (Double,Double,Double,Double)
+stIntToBezBasis3 (p0,p1,p2,p3) = (p0,-5/6*p0+3*p1-3/2*p2+p3/3,p0/3-3/2*p1+3*p2-5/6*p3,p3)
 
 interpolate2Std :: Double -> Double -> Double -> QuadPoly
 interpolate2Std p0 p1 p2 = interpolate2 (0,p0) (1/2,p1) (1,p2)

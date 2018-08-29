@@ -52,6 +52,8 @@
 22. Allow rendering of NURBS curves of degree up to 3 by splitting into rational beziers
     (DONE!) Though not necessarily super efficiently (but actually I think it's pretty good, except for the 
     wasted computation in the interpolation function and the change of basis to the Bezier basis).
+    (update: removed the wasted computation, by using a direct change of basis rather than a generic 
+    interpolation function followed by a different change of basis)
 23. Possibly reimplement circular/elliptical arcs in terms of NURBS given 22/18
     Related to 21. Not sure abt this one?
 24. Add NURBS contours, i.e. a NURBS with domain the circle, it has the added benefit that 
@@ -60,6 +62,7 @@
     continguous subset of the control points
 25. Add SVG loading/rendering
 26. Add conversion to/from the standard interpolation basis in Polynomial.hs
+    (Partly DONE) added st int to bezier basis, and computed the matrices for the other transformations
 27. Improve accuracy of bounding boxes computed for beziers/rational beziers
 28. In fact, allow negative weights (as long as it doesn't produce a weight of 0 on the interval) for 
     rational beziers/nurbs, and allow computation of their bounding boxes 

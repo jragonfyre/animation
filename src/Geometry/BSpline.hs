@@ -229,9 +229,12 @@ rBSplineToPath2 knots wpts =
     mws = V.map computeW kmids
     segs = V.generate numkints $ \i -> 
       let 
-        (sxh,cxh,_) = standardToBezierBasis2 $ interpolate2Std (exhs!i) (mxhs!i) (exhs!(i+1))
-        (syh,cyh,_) = standardToBezierBasis2 $ interpolate2Std (eyhs!i) (myhs!i) (eyhs!(i+1))
-        (sw,cw,ew) = standardToBezierBasis2 $ interpolate2Std (ews!i) (mws!i) (ews!(i+1))
+        (sxh,cxh,_) = stIntToBezBasis2 (exhs!i, mxhs!i, exhs!(i+1))
+        --(sxh,cxh,_) = standardToBezierBasis2 $ interpolate2Std (exhs!i) (mxhs!i) (exhs!(i+1))
+        (syh,cyh,_) = stIntToBezBasis2 (eyhs!i, myhs!i, eyhs!(i+1))
+        --(syh,cyh,_) = standardToBezierBasis2 $ interpolate2Std (eyhs!i) (myhs!i) (eyhs!(i+1))
+        (sw,cw,ew) = stIntToBezBasis2 (ews!i, mws!i, ews!(i+1))
+        --(sw,cw,ew) = standardToBezierBasis2 $ interpolate2Std (ews!i) (mws!i) (ews!(i+1))
       in
         makeRBez2Seg (makePoint (sxh/sw) (syh/sw),sw) (makePoint (cxh/cw) (cyh/cw),cw) ew
     cap = makePoint ((exhs!numkints)/(ews!numkints)) ((eyhs!numkints)/(ews!numkints))
@@ -272,9 +275,12 @@ rBSplineToPath3 knots wpts =
     m2ws = V.map computeW kmids2
     segs = V.generate numkints $ \i -> 
       let 
-        (sxh,cxh,dxh,_) = standardToBezierBasis3 $ interpolate3Std (exhs!i) (m1xhs!i) (m2xhs!i) (exhs!(i+1))
-        (syh,cyh,dyh,_) = standardToBezierBasis3 $ interpolate3Std (eyhs!i) (m1yhs!i) (m2yhs!i) (eyhs!(i+1))
-        (sw,cw,dw,ew) = standardToBezierBasis3 $ interpolate3Std (ews!i) (m1ws!i) (m2ws!i) (ews!(i+1))
+        (sxh,cxh,dxh,_) = stIntToBezBasis3 (exhs!i, m1xhs!i, m2xhs!i, exhs!(i+1))
+        (syh,cyh,dyh,_) = stIntToBezBasis3 (eyhs!i, m1yhs!i, m2yhs!i, eyhs!(i+1))
+        (sw,cw,dw,ew) = stIntToBezBasis3 (ews!i, m1ws!i, m2ws!i, ews!(i+1))
+        --(sxh,cxh,dxh,_) = standardToBezierBasis3 $ interpolate3Std (exhs!i) (m1xhs!i) (m2xhs!i) (exhs!(i+1))
+        --(syh,cyh,dyh,_) = standardToBezierBasis3 $ interpolate3Std (eyhs!i) (m1yhs!i) (m2yhs!i) (eyhs!(i+1))
+        --(sw,cw,dw,ew) = standardToBezierBasis3 $ interpolate3Std (ews!i) (m1ws!i) (m2ws!i) (ews!(i+1))
       in
         makeRBez3Seg 
           (makePoint (sxh/sw) (syh/sw),sw)
