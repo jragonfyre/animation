@@ -89,6 +89,18 @@ deriving instance Negatable Covector
 instance Negatable Matrix where
   negify mat = mat & each %~ negify
 
+instance Summable Double Double Double where 
+  (+.) = (+)
+instance Multiplicable Double Double Double where
+  (*.) = (*)
+instance Zeroable Double where
+  zero = 0
+instance Negatable Double where
+  negify = negate
+instance Unitable Double where
+  unit = 1
+instance Subtractable Double Double Double where
+  (-.) = \x y -> (x-y)
 instance Summable Vector Vector Vector where
   --(+.) :: Vector -> Vector -> Vector
   (+.) v1 v2 = v1 & x +~ (v2 ^. x) & y +~ (v2 ^. y)

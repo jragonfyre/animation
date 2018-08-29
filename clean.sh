@@ -6,6 +6,9 @@
 # Distributed under terms of the MIT license.
 #
 
+pushd $1
+
 rm *~
 
+popd
 

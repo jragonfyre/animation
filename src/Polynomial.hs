@@ -115,7 +115,7 @@ standard to Bezier:
 standardToBezierBasis2 :: QuadPoly -> (Double,Double,Double)
 standardToBezierBasis2 (b2,b1,b0) = (b0,(b1/2)+b0,b2+b1+b0)
 
-standardToBezierBasis3 :: CubPoly -> (Double,Double,Double)
+standardToBezierBasis3 :: CubPoly -> (Double,Double,Double,Double)
 standardToBezierBasis3 (b3,b2,b1,b0) = (b0,(b1/3)+b0,(b2/3)+((2/3)*b1)+b0,b3+b2+b1+b0)
 
 interpolate2 :: (Double,Double) -> (Double,Double) -> (Double,Double) -> QuadPoly

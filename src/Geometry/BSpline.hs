@@ -81,13 +81,14 @@ cbsMainLoopGen knots d (cnvComb,cpts) x k p = runST $ do
 
 --debug
 
-computeBSpline :: Vector Double -> Int -> Vector Double -> Double -> Double
-computeBSpline knots d cpts x = 
+computeBSpline :: Vector Double -> Vector Double -> Double -> Double
+computeBSpline knots cpts x = 
   case V.findIndex (> x) knots of
     Nothing -> 
       0
     Just kp1 ->
       let 
+        d = V.length knots - V.length cpts
         k = kp1-1
         p = d-1
       in
@@ -99,13 +100,15 @@ computeBSpline knots d cpts x =
         else
           0
 
-computeBSplineGen :: Vector Double -> Int -> ControlPoints a -> Double -> Maybe a
-computeBSplineGen knots d cpts x = 
+computeBSplineGen :: Vector Double -> ControlPoints a -> Double -> Maybe a
+computeBSplineGen knots cpts@(_,pts) x = 
   case V.findIndex (> x) knots of
     Nothing -> 
       Nothing
     Just kp1 ->
       let 
+        -- d is the order of the spline, p is the degree
+        d = V.length knots - V.length pts
         k = kp1-1
         p = d-1
       in
@@ -117,17 +120,31 @@ computeBSplineGen knots d cpts x =
         else
           Nothing
 
-computeRBSpline :: Vector Double -> Int -> WControlPoints a -> Double -> Maybe a
-computeRBSpline knots d (scaler,convComb,wpts) x = 
+computeRBSpline :: Vector Double -> WControlPoints a -> Double -> Maybe a
+computeRBSpline knots (scaler,convComb,wpts) x = 
   let
     wts = V.map snd wpts
     spts = V.map (uncurry (flip scaler)) wpts
-    w = computeBSpline knots d wts x
-    mevalPt = computeBSplineGen knots d (convComb,spts) x
+    w = computeBSpline knots wts x
+    mevalPt = computeBSplineGen knots (convComb,spts) x
   in
     fmap (scaler (1/w)) mevalPt
 
 -- this number is the degree of the curve, not its order
 -- also this is almost certainly not the most efficient way to go about this, it's just the easiest :)
---rBSplineToBeziers2 :: Vector Double -> WControlPoints Point -> [RBezier2]
+{-
+rBSplineToBeziers2 :: Vector Double -> WControlPoints Point -> [RBezier2]
+rBSplineToBeziers2 knots cpts@(scaler,convComb,wpts) = 
+  let
+    m = length knots
+    n = length wpts -- hence there are n basis functions, and at most n nontrivial knot intervals on which 
+    -- the correct number of basis functions (3) are defined
+    d = m - n -- this had *better* be 3
+    p = d-1 -- this should therefore be 2
+    iKnots = V.slice p (n-1-2*p) knots
+    --uniqks = V.uniq knots
+    kints = filter (uncurry (/=)) . V.zip iKnots $ tail iKnots -- the knot intervals
+  in
+    
 
+-}
