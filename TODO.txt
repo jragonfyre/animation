@@ -69,7 +69,7 @@
 30. Possibly remove nonrational Bezier curves/NUBS in favor of rational Beziers/NURBS, might have to look into
     whether/how much of a performance differnce there is/might be. See 21.
 31. Glitch in parallel segments for bezier curves with cusps, once this is fixed, together with subdivision
-    rendering of Bezier curves with cusps should be *much* better.
+    rendering of Bezier curves with cusps should be *much* better. (DONE)
 32. Refactor the path abstraction. Need easier combination/building for paths, also converting geometric
     objects into paths/pathSegments needs to be uniformized. Currently it's an absolute mess.
     See 21.

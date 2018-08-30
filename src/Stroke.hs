@@ -160,15 +160,17 @@ buildJoin ss norm1 norm2 center =
 -- takes the initial segment and the start and end of the desired new parallel segment
 -- as determined by buildJoin
 -- plus the distance 
-parallelSegment :: Double -> WholePathSegment -> Point -> Point -> [PathSegment]
+parallelSegment :: StrokeStyle -> WholePathSegment -> Point -> Point -> [PathSegment]
 parallelSegment _ (WPathSeg _) s _ = [PathSeg s]
-parallelSegment d (WPathBez2 bez) s _ =
+parallelSegment ss seg@(WPathBez2 bez) s _ =
   let
+    d = strokeDistance ss
+    ttol = tangentTolerance ss
     ps = start2 bez
     pc = control2 bez
     pe = end2 bez
-    norm1 = perpendicular . normalize $ pc -. ps
-    norm2 = perpendicular . normalize $ pe -. pc
+    norm1 = startNormal ttol seg --perpendicular . normalize $ pc -. ps
+    norm2 = endNormal ttol seg --perpendicular . normalize $ pe -. pc
     mat = transpose $ makeMatrix norm1 norm2
     c = det mat -- norm1 `cross` norm2 
     -- (these are equal anyway by definition, so might as well cut out a step)
@@ -183,15 +185,19 @@ parallelSegment d (WPathBez2 bez) s _ =
           -- this *really* doesn't work near a cusp xP
   in
     [PathBez2 s (pc+.cVec)]
-parallelSegment d (WPathBez3 bez) s _ =
+parallelSegment ss seg@(WPathBez3 bez) s _ =
   let
+    d = strokeDistance ss
+    ttol = tangentTolerance ss
     ps = start3 bez
     pc = stCont3 bez
     pd = endCont3 bez
     pe = end3 bez
-    norm1 = perpendicular . normalize $ pc -. ps
-    norm2 = perpendicular . normalize $ pd -. pc
-    norm3 = perpendicular . normalize $ pe -. pd
+    --norm1 = perpendicular . normalize $ pc -. ps
+    --norm3 = perpendicular . normalize $ pe -. pd
+    norm1 = startNormal ttol seg
+    norm2 = perpendicular . normalize $ pd -. pc -- uhoh, this can't possibly be good... TODO fix
+    norm3 = endNormal ttol seg
     dVec = makeVector d d
     mat1 = transpose $ makeMatrix norm1 norm2
     c1 = det mat1 -- norm1 `cross` norm2 
@@ -217,14 +223,17 @@ parallelSegment d (WPathBez3 bez) s _ =
           -- this *really* doesn't work near a cusp xP still xP
   in
     [PathBez3 s (pc+.cVec1) (pd+.cVec2)]
+
 -- THIS IS SOOOO SKETCHY XD TODO
-parallelSegment d (WPathRBez2 rbez) s _ =
+parallelSegment ss seg@(WPathRBez2 rbez) s _ =
   let
+    d = strokeDistance ss
+    ttol = tangentTolerance ss
     (ps,sw) = rstart2 rbez
     (pc,cw) = rcontrol2 rbez
     (pe,ew) = rend2 rbez
-    norm1 = perpendicular . normalize $ pc -. ps
-    norm2 = perpendicular . normalize $ pe -. pc
+    norm1 = startNormal ttol seg --perpendicular . normalize $ pc -. ps
+    norm2 = endNormal ttol seg --perpendicular . normalize $ pe -. pc
     mat = transpose $ makeMatrix norm1 norm2
     c = det mat -- norm1 `cross` norm2 
     -- (these are equal anyway by definition, so might as well cut out a step)
@@ -240,15 +249,20 @@ parallelSegment d (WPathRBez2 rbez) s _ =
   in
     [PathRBez2 (s,sw/ew) (pc+.cVec,cw/ew)]
 -- THIS IS SOOOO SKETCHY XD TODO
-parallelSegment d (WPathRBez3 rbez) s _ =
+parallelSegment ss seg@(WPathRBez3 rbez) s _ =
   let
+    d = strokeDistance ss
+    ttol = tangentTolerance ss
     (ps,sw) = rstart3 rbez
     (pc,cw) = rstCont3 rbez
     (pd,dw) = rendCont3 rbez
     (pe,ew) = rend3 rbez
-    norm1 = perpendicular . normalize $ pc -. ps
-    norm2 = perpendicular . normalize $ pd -. pc
-    norm3 = perpendicular . normalize $ pe -. pd
+    norm1 = startNormal ttol seg
+    norm2 = perpendicular . normalize $ pd -. pc -- uhoh, this can't possibly be good... TODO fix
+    norm3 = endNormal ttol seg
+    --norm1 = perpendicular . normalize $ pc -. ps
+    --norm2 = perpendicular . normalize $ pd -. pc
+    --norm3 = perpendicular . normalize $ pe -. pd
     dVec = makeVector d d
     mat1 = transpose $ makeMatrix norm1 norm2
     c1 = det mat1 -- norm1 `cross` norm2 
@@ -275,8 +289,9 @@ parallelSegment d (WPathRBez3 rbez) s _ =
   in
     [PathRBez3 (s,sw/ew) (pc+.cVec1,cw/ew) (pd+.cVec2,dw/ew)]
 -- lazy parallel elliptical arc
-parallelSegment d (WPathEArc earc) s _ = 
+parallelSegment ss (WPathEArc earc) s _ = 
   let
+    d = strokeDistance ss
     ell = earc^.ellipse
     (_,tol) = ell^.matrix
     rx = ell^.radX
@@ -292,7 +307,7 @@ parallelSegment d (WPathEArc earc) s _ =
 
 -- IT WORKS!!!
 strokeExterior :: StrokeStyle -> Contour -> Contour
-strokeExterior ss@StrokeStyle{strokeDistance = dist} cont@Contour{contourSegs=cs} = 
+strokeExterior ss cont@Contour{contourSegs=cs} = 
   let
     --csegL = V.toList cs
     ttol = tangentTolerance ss
@@ -309,7 +324,7 @@ strokeExterior ss@StrokeStyle{strokeDistance = dist} cont@Contour{contourSegs=cs
     joinSegs = V.map lPathSegs joins
     joinEnds = V.map lPathEnd joins
     joinEndsRot = V.imap (\i _ -> joinEnds!((i-1)`mod`n)) joinEnds
-    parSegs = V.zipWith3 (parallelSegment dist) ws joinEndsRot joinSts
+    parSegs = V.zipWith3 (parallelSegment ss) ws joinEndsRot joinSts
     allSegs = V.zipWith (++) parSegs joinSegs
     strokecs = concat allSegs
   in 
@@ -344,7 +359,7 @@ strokeContour s c = (strokeExterior s $ reverseC c, strokeExterior s c)
 -- think I need to somehow unify paths with contours.
 -- they behave basically the same for a lot of applications
 strokePathExterior :: StrokeStyle -> Point -> Point -> Path -> Path
-strokePathExterior ss@StrokeStyle{strokeDistance = dist} st end path@Path{pathSegs=(ps,_)} = 
+strokePathExterior ss st end path@Path{pathSegs=(ps,_)} = 
   let
     --csegL = V.toList cs
     ttol = tangentTolerance ss
@@ -363,7 +378,7 @@ strokePathExterior ss@StrokeStyle{strokeDistance = dist} st end path@Path{pathSe
     joinEnds = V.map lPathEnd joins
     sts = V.cons st joinEnds
     --joinEndsRot = V.imap (\i _ -> joinEnds!((i-1)`mod`n)) joinEnds
-    parSegs = V.zipWith3 (parallelSegment dist) ws sts eds
+    parSegs = V.zipWith3 (parallelSegment ss) ws sts eds
     allSegs = V.zipWith (++) parSegs segs
     strokecs = concat allSegs
   in 
