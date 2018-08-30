@@ -36,6 +36,61 @@ computeBez2Coeffs (s,c,e) = (e-2*c+s,-2*s+2*c,s)
 computeBez3Coeffs :: (Double,Double,Double,Double) -> (Double,Double,Double,Double)
 computeBez3Coeffs (s,c,d,e) = (-s+3*c-3*d+e,3*s-6*c+3*d,-3*s+3*c,s)
 
+bezierFromCoeffs2 :: QuadPoly -> QuadPoly -> Bezier2
+bezierFromCoeffs2 xs ys = 
+  let
+    (sx,cx,ex) = stdToBezBasis2 xs
+    (sy,cy,ey) = stdToBezBasis2 ys
+  in
+    makeBezier2 (makePoint sx sy) (makePoint cx cy) (makePoint ex ey)
+
+-- the x coefficients must be for xh
+{-
+rbezierFromCoeffs2 :: QuadPoly -> QuadPoly -> QuadPoly -> RBezier2
+rbezierFromCoeffs2 xhs yhs ws = 
+  let
+    (sx,cx,ex) = stdToBezBasis2 xs
+    (sy,cy,ey) = stdToBezBasis2 ys
+    (sw,cw,ew) = stdToBezBasis2 ws
+  in
+    makeBezier2 (makePoint sx sy) (makePoint cx cy) (makePoint ex ey)
+-}
+
+bezierFromCoeffs3 :: CubPoly -> CubPoly -> Bezier3
+bezierFromCoeffs3 xs ys = 
+  let
+    (sx,cx,dx,ex) = stdToBezBasis3 xs
+    (sy,cy,dy,ey) = stdToBezBasis3 ys
+  in
+    makeBezier3 (makePoint sx sy) (makePoint cx cy) (makePoint dx dy) (makePoint ex ey)
+
+restrictTo2 :: (Double,Double) -> Bezier2 -> Bezier2
+restrictTo2 (st,ed) bez = 
+  let
+    l = (ed-st,st)
+  in
+    bezierFromCoeffs2 (composeQuadLin (xCoeffs2 bez) l) (composeQuadLin (yCoeffs2 bez) l)
+
+restrictTo3 :: (Double,Double) -> Bezier3 -> Bezier3
+restrictTo3 (st,ed) bez = 
+  let
+    l = (ed-st,st)
+  in
+    bezierFromCoeffs3 (composeCubLin (xCoeffs3 bez) l) (composeCubLin (yCoeffs3 bez) l)
+
+-- for laziness reasons, (in the nontechnical sense), I'm going to implement this in terms of restrictTo3 
+-- rather than appropriately computing all the points, though that (done well)
+-- is almost certainly more efficient, since
+-- there is probably a lot of redundant computing going on at internal subdivision points and control points
+-- around internal subdivision points, which have restrictions placed on them by continuity and smoothness.
+-- TODO: Take advantage of restrictions to make this more efficient
+-- assumes the list of doubles is sorted in increasing order and contains 0 and 1
+subdivideBezier3 :: [Double] -> Bezier3 -> [Bezier3]
+subdivideBezier3 ks bez = map (flip restrictTo3 bez) $ zip ks (tail ks)
+
+subdivideBezier2 :: [Double] -> Bezier2 -> [Bezier2]
+subdivideBezier2 ks bez = map (flip restrictTo2 bez) $ zip ks (tail ks)
+
 type WPoint = (Point,Double)
 
 transformWPoint :: Affine -> WPoint -> WPoint

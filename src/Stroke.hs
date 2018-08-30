@@ -61,6 +61,7 @@ data StrokeStyle = StrokeStyle
   , capType :: CapType
   , ellipseTolerance :: Double
   , joinTolerance :: Double
+  , tangentTolerance :: Double
   }
   deriving (Show, Eq, Ord, Read)
 
@@ -294,12 +295,15 @@ strokeExterior :: StrokeStyle -> Contour -> Contour
 strokeExterior ss@StrokeStyle{strokeDistance = dist} cont@Contour{contourSegs=cs} = 
   let
     --csegL = V.toList cs
+    ttol = tangentTolerance ss
     ws = toWholeSegsC cont
     n = V.length cs
     --starts = fmap pSegStart cs
     ends = V.imap (\i _ -> pSegStart $ (cs!((i+1)`mod`n))) cs
-    normal1s = V.map (\wps -> pathNormal wps 1) ws
-    normal2s = V.imap (\i _ -> pathNormal (ws!((i+1)`mod`n)) 0) ws
+    normal1s = V.map (\wps -> endNormal ttol wps) ws
+    -- normal1s = V.map (\wps -> pathNormal wps 1) ws
+    normal2s = V.imap (\i _ -> startNormal ttol (ws!((i+1)`mod`n))) ws
+    -- normal2s = V.imap (\i _ -> pathNormal (ws!((i+1)`mod`n)) 0) ws
     joins = V.zipWith3 (buildJoin ss) normal1s normal2s ends
     joinSts = V.map lPathStart joins
     joinSegs = V.map lPathSegs joins
@@ -312,7 +316,7 @@ strokeExterior ss@StrokeStyle{strokeDistance = dist} cont@Contour{contourSegs=cs
     makeContour strokecs
 
 strokeTestS :: StrokeStyle
-strokeTestS = StrokeStyle 1 (RoundJoin) (squareCap) 1e-7 1e-7
+strokeTestS = StrokeStyle 1 (RoundJoin) (squareCap) 1e-7 1e-7 1e-7
 
 
 strokeTestC :: Contour
@@ -343,11 +347,14 @@ strokePathExterior :: StrokeStyle -> Point -> Point -> Path -> Path
 strokePathExterior ss@StrokeStyle{strokeDistance = dist} st end path@Path{pathSegs=(ps,_)} = 
   let
     --csegL = V.toList cs
+    ttol = tangentTolerance ss
     ws = toWholeSegsP path
     n = V.length ps
     ints = V.generate (n-1) $ flip getVertexP path . (+1)
-    normal1s = V.generate (n-1) $ (\i -> pathNormal (ws!i) 1)
-    normal2s = V.generate (n-1) $ (\i -> pathNormal (ws!(i+1)) 0)
+    normal1s = V.generate (n-1) $ (\i -> endNormal ttol (ws!i))
+    --normal1s = V.generate (n-1) $ (\i -> pathNormal (ws!i) 1)
+    normal2s = V.generate (n-1) $ (\i -> startNormal ttol (ws!(i+1)))
+    --normal2s = V.generate (n-1) $ (\i -> pathNormal (ws!(i+1)) 0)
     joins = V.zipWith3 (buildJoin ss) normal1s normal2s ints
     joinSts = V.map lPathStart joins
     eds = V.snoc joinSts end -- the start of the join is the end of the prior segment
@@ -366,11 +373,14 @@ strokePathExterior ss@StrokeStyle{strokeDistance = dist} st end path@Path{pathSe
 strokePath :: StrokeStyle -> Path -> Contour
 strokePath ss p =
   let
+    ttol = tangentTolerance ss
     (ps,_) = pathSegs p
     seg1 = getWholeSegmentP 0 p
     segn = getWholeSegmentP ((length ps)-1) p
-    begCap = buildCap ss (negify . pathTangent seg1 $ 0.0) (evaluate seg1 0.0)
-    endCap = buildCap ss (pathTangent segn 1.0) (evaluate segn 1.0)
+    begCap = buildCap ss (negify $ startTangent ttol seg1) (evaluate seg1 0.0)
+    --begCap = buildCap ss (negify $ pathTangent seg1 0.0) (evaluate seg1 0.0)
+    endCap = buildCap ss (endTangent ttol segn) (evaluate segn 1.0)
+    --endCap = buildCap ss (pathTangent segn 1.0) (evaluate segn 1.0)
     Path{pathSegs=(ps1,_)} = strokePathExterior ss (lPathEnd begCap) (lPathStart endCap) p
     Path{pathSegs=(ps2,_)} = strokePathExterior ss (lPathEnd endCap) (lPathStart begCap) $ reverseP p
   in

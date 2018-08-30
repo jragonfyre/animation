@@ -169,6 +169,25 @@ standardToBezierBasis2 (b2,b1,b0) = (b0,(b1/2)+b0,b2+b1+b0)
 standardToBezierBasis3 :: CubPoly -> (Double,Double,Double,Double)
 standardToBezierBasis3 (b3,b2,b1,b0) = (b0,(b1/3)+b0,(b2/3)+((2/3)*b1)+b0,b3+b2+b1+b0)
 
+-- composeLinLin f g ~ f . g
+composeLinLin :: LinPoly -> LinPoly -> LinPoly
+composeLinLin (a1,a0) (b1,b0) = (a1*b1,a1*b0+a0)
+
+composeQuadLin :: QuadPoly -> LinPoly -> QuadPoly
+composeQuadLin (a2,a1,a0) (b1,b0) =
+  ( a2*b1^2
+  , 2*a2*b1*b0+a1*b1
+  , a2*b0^2+a1*b0+a0
+  )
+
+composeCubLin :: CubPoly -> LinPoly -> CubPoly
+composeCubLin (a3,a2,a1,a0) (b1,b0) = 
+  ( a3*b1^3
+  , 3*a3*b1^2*b0+a2*b1^2
+  , 3*a3*b1*b0^2+2*a2*b1*b0+a1*b1
+  , a3*b0^3+a2*b0^2+a1*b0+a0
+  )
+
 stdToBezBasis2 = standardToBezierBasis2
 stdToBezBasis3 = standardToBezierBasis3
 

@@ -1,3 +1,4 @@
+--{-# LANGUAGE UndecidableInstances #-}
 --
 -- Picture.hs
 -- Copyright (C) 2018 jragonfyre <jragonfyre@jragonfyre>
@@ -14,8 +15,14 @@ import Geometry
 import Model
 import Stroke
 
+
 class Strokable a where
   stroke :: StrokeStyle -> a -> ClosedPath
+
+newtype AsPath a = AsPath {fromAsPath :: a}
+
+instance Pathable a => Strokable (AsPath a) where
+  stroke ss = stroke ss . toPath . fromAsPath
 
 instance Strokable Contour where
   stroke ss cont = 
@@ -28,7 +35,7 @@ instance Strokable Path where
   stroke ss pth = 
     [strokePath ss pth]
 
-instance (Foldable f,Strokable a) => Strokable (f a) where
+instance (Strokable a) => Strokable [a] where
   stroke ss f = concatMap (stroke ss) f
 
 class Filling a where 

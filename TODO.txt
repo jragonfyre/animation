@@ -18,8 +18,7 @@
 9. Improve small scale rasterization (i.e. for fonts at low pixel sizes)
 10. Implement more operations on paths and contours, e.g. rotation of contours
 11. Add biarcs, biarc fitting to types of paths? They're apparently a *lot* simpler for a lot of things,
-    in particular offset curves of biarc curves are biarc curves. Also this would be simple
-    after completing 2,3
+    in particular offset curves of biarc curves are biarc curves.
 12. Deal with cusps properly. Probably subdivide, figure out how to get tangents and normals at cusps, and 
     then cap the resulting join (if the tangents are antiparallel ofc). I suppose we could have a sharp point
     that isn't a cusp. (Do math xD)
@@ -66,3 +65,11 @@
 27. Improve accuracy of bounding boxes computed for beziers/rational beziers
 28. In fact, allow negative weights (as long as it doesn't produce a weight of 0 on the interval) for 
     rational beziers/nurbs, and allow computation of their bounding boxes 
+29. Implement subdivision of (rational) Bezier curves (partly DONE, for nonrational Bezier curves)
+30. Possibly remove nonrational Bezier curves/NUBS in favor of rational Beziers/NURBS, might have to look into
+    whether/how much of a performance differnce there is/might be. See 21.
+31. Glitch in parallel segments for bezier curves with cusps, once this is fixed, together with subdivision
+    rendering of Bezier curves with cusps should be *much* better.
+32. Refactor the path abstraction. Need easier combination/building for paths, also converting geometric
+    objects into paths/pathSegments needs to be uniformized. Currently it's an absolute mess.
+    See 21.

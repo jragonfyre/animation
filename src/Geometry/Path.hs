@@ -15,6 +15,9 @@ import Geometry.Bezier
 import Geometry.Ellipse
 import Geometry.Affine
 
+import Polynomial
+import PolynomialSolver
+
 import qualified Data.Vector as V
 import Data.Vector ((!),imap,Vector)
 
@@ -87,6 +90,154 @@ instance Geometric WholePathSegment where
   transform aff (WPathRBez3 seg) = WPathRBez3 (transform aff seg)
   transform aff (WPathEArc seg) = WPathEArc (transform aff seg)
 
+-- replaces linear bezier curves with line segments,
+-- and rational bezier curves with constant weights by normal bezier curves
+-- EArcs and line segments are presently not simplifiable
+-- tho we could remove line segments of length 0
+-- actually hmmm for animation purposes, maybe better if we only subdivide, but just something to keep in mind
+-- in case it actually comes up. This might work just fine.
+--
+-- the purpose of the simplification is for stroking, so the primary goal is removing segment internal cusps
+-- and self intersections
+simplifyWPSeg :: Double -> WholePathSegment -> ([PathSegment], Point)
+simplifyWPSeg tol seg@(WPathBez2 bez) = 
+  let
+    s = start2 bez
+    e = end2 bez
+    xs@(a2,a1,a0) = xCoeffs2 bez
+    computeX = evalQuadratic xs
+    ys@(b2,b1,b0) = yCoeffs2 bez
+    computeY = evalQuadratic ys
+    xps@(c1,c0) = derivCoeffsQuadratic xs
+    yps@(d1,d0) = derivCoeffsQuadratic ys
+    -- ok, when is this linear/a cusp
+    -- linear iff crss == 0 i.e. abs crss < tol
+    crss = a2*b1-b2*a1
+    -- need to figure out whether this can be replaced by one or two line segments
+  in
+    if abs crss < tol
+    then
+      if abs c1 < tol
+      then
+        if abs c0 < tol
+        then
+          if abs d1 < tol
+          then
+            if abs d0 < tol
+            then
+              -- both derivatives are constantly 0, so the bezier is a curve
+              ([],s)
+            else
+              -- no cusp
+              ([PathSeg s],e)
+          else
+            let
+              t = -d0/d1
+              tpt = makePoint (computeX t) (computeY t)
+            in
+              if 0 <= t && t <= 1 -- is cusp on the bezier curve?
+              then
+                ([PathSeg s,PathSeg tpt],e)
+              else
+                ([PathSeg s],e)
+        else
+          ([PathSeg s],e) -- no cusp, so simple line segment
+      else
+        let
+          t = -c0/c1 -- this is where the cusp is
+          -- turning point
+          tpt = makePoint (computeX t) (computeY t)
+        in
+          if 0 <= t && t <= 1 -- is cusp on the bezier curve?
+          then
+            ([PathSeg s,PathSeg tpt],e)
+          else
+            ([PathSeg s],e)
+    else
+      toPathSpec seg
+-- TODO: implement this later
+simplifyWPSeg tol seg@(WPathBez3 bez) = 
+  let
+    s = start3 bez
+    e = end3 bez
+    xs@(a3,a2,a1,a0) = xCoeffs3 bez
+    computeX = evalCubic xs
+    ys@(b3,b2,b1,b0) = yCoeffs3 bez
+    computeY = evalCubic ys
+    xps@(c2,c1,c0) = derivCoeffsCubic xs
+    yps@(d2,d1,d0) = derivCoeffsCubic ys
+    -- uhoh what abt repeated roots?? TODO
+    inrange r t = -r <= t && t <= 1+r
+    xprs = filter (inrange tol) $ solveQuadratic xps
+    yprs = filter (inrange tol) $ solveQuadratic yps
+    -- cusp candidates
+    -- the filter is because we don't want to subdivide if the cusp is at the end of the interval, which is
+    -- ok.
+    cuspcs = filter (inrange (-tol)) [ (t1+t2)/2 | t1 <- xprs, t2 <- yprs, abs (t1-t2) < tol ]
+  in
+    if abs a3 < tol && abs b3 < tol -- this is a quadratic bezier in disguise, convert it and simplify
+    then
+      simplifyWPSeg tol (WPathBez2 (bezierFromCoeffs2 (a2,a1,a0) (b2,b1,b0)))
+    else
+      -- subdivide at cusp candidates
+      toPathSpec seg
+simplifyWPSeg tol seg@(WPathRBez2 rbez) = 
+  let
+    (s,sw) = rstart2 rbez
+    (c,cw) = rcontrol2 rbez
+    (e,ew) = rend2 rbez
+  in
+    if abs ((sw/ew)-1) < tol && abs ((cw/ew)-1) < tol
+    then
+      simplifyWPSeg tol . WPathBez2 $ makeBezier2 s c e
+    else
+      toPathSpec seg
+simplifyWPSeg tol seg@(WPathRBez3 rbez) =
+  let
+    (s,sw) = rstart3 rbez
+    (c,cw) = rstCont3 rbez
+    (d,dw) = rendCont3 rbez
+    (e,ew) = rend3 rbez
+  in
+    if abs ((sw/ew)-1) < tol && abs ((cw/ew)-1) < tol && abs ((dw/ew)-1) < tol
+    then
+      simplifyWPSeg tol . WPathBez3 $ makeBezier3 s c d e 
+      -- would be better to detect cusps and stuff for rational beziers,
+      -- but the derivatives are more complicated
+    else
+      toPathSpec seg
+simplifyWPSeg _ seg = toPathSpec seg
+
+toPathSpec :: WholePathSegment -> ([PathSegment],Point)
+toPathSpec (WPathSeg seg) = ([PathSeg (seg^.start)], seg^.end)
+toPathSpec (WPathBez2 bez) = ([PathBez2 (start2 bez) (control2 bez)], end2 bez)
+toPathSpec (WPathBez3 bez) = ([PathBez3 (start3 bez) (stCont3 bez) (endCont3 bez)], end3 bez)
+toPathSpec (WPathRBez2 rbez) = 
+  let
+    (s,sw) = rstart2 rbez
+    (c,cw) = rcontrol2 rbez
+    (e,ew) = rend2 rbez
+  in
+    ([PathRBez2 (s,sw/ew) (c,cw/ew)], e)
+toPathSpec (WPathRBez3 rbez) = 
+  let
+    (s,sw) = rstart3 rbez
+    (c,cw) = rstCont3 rbez
+    (d,dw) = rendCont3 rbez
+    (e,ew) = rend3 rbez
+  in
+    ([PathRBez3 (s,sw/ew) (c,cw/ew) (d,dw/ew)], e)
+toPathSpec (WPathEArc earc) =
+  let 
+    (mat,tol) = earc^.ellipse.matrix
+    deltphi = earc^.delta
+    fA = abs deltphi >= pi
+    fS = deltphi >= 0
+  in
+    ( [ PathEArc (parametrizeEArc earc 0) mat fA fS tol ]
+    , (parametrizeEArc earc 1)
+    )
+
 evaluate :: WholePathSegment -> Double -> Point
 evaluate (WPathSeg seg) = segmentParametrization seg
 evaluate (WPathBez2 bez) = parametrization2 bez
@@ -114,11 +265,165 @@ derivative (WPathRBez2 rbez) t = rderivative2 rbez t
 derivative (WPathRBez3 rbez) t = rderivative3 rbez t
 derivative (WPathEArc earc) t = derivativeEArc earc t
 
+-- needed to properly deal with cusps
+-- startTangent tol (WPathSeg seg) = normalize $ (seg^.start) -. (seg^.end)
+startTangent :: Double -> WholePathSegment -> T.Vector
+startTangent tol (WPathBez2 bez) = 
+  let
+    s = start2 bez
+    c = control2 bez
+    e = end2 bez
+    vec1 = c-.s
+    vec2 = e-.s
+    l1 = vectorNorm vec1
+  in 
+    if l1 < tol
+    then
+      normalize  vec2
+    else
+      (1/l1)*.vec1
+startTangent tol (WPathBez3 bez) = 
+  let
+    s = start3 bez
+    c = stCont3 bez
+    d = endCont3 bez
+    e = end3 bez
+    vec1 = c -. s
+    vec2 = d -. s
+    vec3 = e -. s
+    l1 = vectorNorm vec1
+    l2 = vectorNorm vec2
+  in 
+    if l1 < tol
+    then
+      if l2 < tol
+      then
+        normalize vec3
+      else
+        (1/l2)*.vec2
+    else
+      (1/l1)*.vec1
+startTangent tol (WPathRBez2 rbez) = 
+  let
+    (s,_) = rstart2 rbez
+    (c,_) = rcontrol2 rbez
+    (e,_) = rend2 rbez
+    vec1 = c-.s
+    vec2 = e-.s
+    l1 = vectorNorm vec1
+  in 
+    if l1 < tol
+    then
+      normalize $ vec2
+    else
+      (1/l1)*.vec1
+startTangent tol (WPathRBez3 rbez) = 
+  let
+    (s,_) = rstart3 rbez
+    (c,_) = rstCont3 rbez
+    (d,_) = rendCont3 rbez
+    (e,_) = rend3 rbez
+    vec1 = c -. s
+    vec2 = d -. s
+    vec3 = e -. s
+    l1 = vectorNorm vec1
+    l2 = vectorNorm vec2
+  in 
+    if l1 < tol
+    then
+      if l2 < tol
+      then
+        normalize vec3
+      else
+        (1/l2)*.vec2
+    else
+      (1/l1)*.vec1
+startTangent _ wps = pathTangent wps 0
+
+endTangent :: Double -> WholePathSegment -> T.Vector
+endTangent tol (WPathBez2 bez) = 
+  let
+    s = start2 bez
+    c = control2 bez
+    e = end2 bez
+    vec1 = e-.c
+    vec2 = e-.s
+    l1 = vectorNorm vec1
+  in 
+    if l1 < tol
+    then
+      normalize  vec2
+    else
+      (1/l1)*.vec1
+endTangent tol (WPathBez3 bez) = 
+  let
+    s = start3 bez
+    c = stCont3 bez
+    d = endCont3 bez
+    e = end3 bez
+    vec1 = e -. d
+    vec2 = e -. c
+    vec3 = e -. s
+    l1 = vectorNorm vec1
+    l2 = vectorNorm vec2
+  in 
+    if l1 < tol
+    then
+      if l2 < tol
+      then
+        normalize vec3
+      else
+        (1/l2)*.vec2
+    else
+      (1/l1)*.vec1
+endTangent tol (WPathRBez2 rbez) = 
+  let
+    (s,_) = rstart2 rbez
+    (c,_) = rcontrol2 rbez
+    (e,_) = rend2 rbez
+    vec1 = e-.c
+    vec2 = e-.s
+    l1 = vectorNorm vec1
+  in 
+    if l1 < tol
+    then
+      normalize $ vec2
+    else
+      (1/l1)*.vec1
+endTangent tol (WPathRBez3 rbez) = 
+  let
+    (s,_) = rstart3 rbez
+    (c,_) = rstCont3 rbez
+    (d,_) = rendCont3 rbez
+    (e,_) = rend3 rbez
+    vec1 = e -. d
+    vec2 = e -. c
+    vec3 = e -. s
+    l1 = vectorNorm vec1
+    l2 = vectorNorm vec2
+  in 
+    if l1 < tol
+    then
+      if l2 < tol
+      then
+        normalize vec3
+      else
+        (1/l2)*.vec2
+    else
+      (1/l1)*.vec1
+endTangent _ wps = pathTangent wps 1
+
 pathTangent :: WholePathSegment -> Double -> T.Vector
 pathTangent wpseg = normalize . derivative wpseg
 
 pathNormal :: WholePathSegment -> Double -> T.Vector
 pathNormal wpseg = perpendicular . pathTangent wpseg
+
+startNormal :: Double -> WholePathSegment -> T.Vector
+startNormal tol = perpendicular . startTangent tol
+
+endNormal :: Double -> WholePathSegment -> T.Vector
+endNormal tol = perpendicular . endTangent tol
 
 reverseSegment :: PathSegment -> Point -> PathSegment
 reverseSegment (PathSeg _) rs = PathSeg rs
@@ -184,6 +489,8 @@ instance (Functor f, Geometric a) => Geometric (f a) where
 makeContour :: [PathSegment] -> Contour
 makeContour = Contour . V.fromList
 
+type PathSpec = ([PathSegment],Point)
+
 newtype Path = Path { pathSegs :: (Vector PathSegment, Point) }
   deriving (Show, Eq, Ord, Read)
 
@@ -195,6 +502,9 @@ instance Geometric Path where
 
 makePath :: [PathSegment] -> Point -> Path
 makePath ps cap = Path (V.fromList ps, cap)
+
+pathFromSpec :: PathSpec -> Path
+pathFromSpec = uncurry makePath
 
 numSegsC :: Contour -> Int
 numSegsC = V.length . contourSegs
@@ -288,4 +598,61 @@ reverseC Contour{contourSegs=cs} = Contour . V.reverse $ V.imap f cs
     f i seg = reverseSegment seg (reverseStart i)
 
 --toWholeSegsOP :: Path -> Vector WholePathSegment
+
+class Pathable a where
+  toPath :: a -> Path
+  pathStart :: a -> Point
+  pathStart = pathStart . toPath
+  pathEnd :: a -> Point
+  pathEnd = pathEnd . toPath
+
+instance Pathable Path where
+  toPath = id
+  pathStart Path{pathSegs=(ps,cap)} = 
+    if V.length ps == 0
+    then
+      cap
+    else
+      pSegStart $ (ps!0)
+  pathEnd Path{pathSegs=(_,cap)} = cap
+
+instance Pathable ([PathSegment],Point) where
+  toPath = pathFromSpec
+  pathStart ([],cap) = cap
+  pathStart (seg:_,_) = pSegStart seg
+  pathEnd (_,cap) = cap
+
+
+instance Pathable Bezier2 where
+  toPath bez = Path (V.singleton $ PathBez2 (start2 bez) (control2 bez),end2 bez)
+  pathStart = start2
+  pathEnd = end2
+
+instance Pathable RBezier2 where
+  toPath rbez = 
+    let 
+      (s,sw) = rstart2 rbez
+      (c,cw) = rcontrol2 rbez
+      (e,ew) = rend2 rbez
+    in
+      Path (V.singleton $ PathRBez2 (s,sw/ew) (c,cw/ew),e)
+  pathStart = fst . rstart2
+  pathEnd = fst . rend2
+
+instance Pathable Bezier3 where
+  toPath bez = Path (V.singleton $ PathBez3 (start3 bez) (stCont3 bez) (endCont3 bez),end3 bez)
+  pathStart = start3
+  pathEnd = end3
+
+instance Pathable RBezier3 where
+  toPath rbez = 
+    let 
+      (s,sw) = rstart3 rbez
+      (c,cw) = rstCont3 rbez
+      (d,dw) = rendCont3 rbez
+      (e,ew) = rend3 rbez
+    in
+      Path (V.singleton $ PathRBez3 (s,sw/ew) (c,cw/ew) (d,dw/ew),e)
+  pathStart = fst . rstart3
+  pathEnd = fst . rend3
 
