@@ -36,40 +36,34 @@
 16. Never compare floats for equality. Pretty urgent. This is a huge source of bugs. Just fixed one in the 
     build join function causing massive streaking and glitching.
 17. Glitch when stroking sharp interior bends, see Q with a stroke distance of 40.
-18. Successfully added Rational Bezier curves. (DONE)
-19. Add implicit polynomial (I mean polynomial in x) contours (i.e. the level set of a differentiable 
+18. Add implicit polynomial (I mean polynomial in x) contours (i.e. the level set of a differentiable 
     function in x and y which is at most a cubic polynomial in x when y is fixed.)
     Then we could solve for x, and also compute the normal to the contour at any given point (since we know the
     gradient). Thus the scan rasterizer could rasterize such a contour. Need to be careful with how we define
     orientation, but I think it could work. This would be a solution to 2 above, as well as being sooooo much
     more general. Could do soooo much cool shit with this. 
-20. Related to 19. Add general parametric paths which are polynomial in y. Like fun fact, the scan rasterizer
+19. Related to 19. Add general parametric paths which are polynomial in y. Like fun fact, the scan rasterizer
     doesn't give a shit what x is doing as long as we can solve for y, and take appropriate derivatives.
-21. Refactor everything. Like the path abstraction has gotten a bit complicated, since there are so many
+20. Refactor everything. Like the path abstraction has gotten a bit complicated, since there are so many
     different kinds of paths. Might want to just get rid of non-rational Bezier curves, since they are 
     entirely subsumed by rational Bezier curves
-22. Allow rendering of NURBS curves of degree up to 3 by splitting into rational beziers
-    (DONE!) Though not necessarily super efficiently (but actually I think it's pretty good, except for the 
-    wasted computation in the interpolation function and the change of basis to the Bezier basis).
-    (update: removed the wasted computation, by using a direct change of basis rather than a generic 
-    interpolation function followed by a different change of basis)
-23. Possibly reimplement circular/elliptical arcs in terms of NURBS given 22/18
-    Related to 21. Not sure abt this one?
-24. Add NURBS contours, i.e. a NURBS with domain the circle, it has the added benefit that 
+21. Possibly reimplement circular/elliptical arcs in terms of NURBS
+    Related to 20. Not sure abt this one?
+22. Add NURBS contours, i.e. a NURBS with domain the circle, it has the added benefit that 
     #knots = #control points, regardless of degree or anything, though it admittedly isn't clear how knots and
     control points are directly related in this case. It's just that there are #knots rotations of any
     continguous subset of the control points
-25. Add SVG loading/rendering
-26. Add conversion to/from the standard interpolation basis in Polynomial.hs
+23. Add SVG loading/rendering
+24. Add conversion to/from the standard interpolation basis in Polynomial.hs
     (Partly DONE) added st int to bezier basis, and computed the matrices for the other transformations
-27. Improve accuracy of bounding boxes computed for beziers/rational beziers
-28. In fact, allow negative weights (as long as it doesn't produce a weight of 0 on the interval) for 
+25. Improve accuracy of bounding boxes computed for beziers/rational beziers
+26. In fact, allow negative weights (as long as it doesn't produce a weight of 0 on the interval) for 
     rational beziers/nurbs, and allow computation of their bounding boxes 
-29. Implement subdivision of (rational) Bezier curves (partly DONE, for nonrational Bezier curves)
-30. Possibly remove nonrational Bezier curves/NUBS in favor of rational Beziers/NURBS, might have to look into
-    whether/how much of a performance differnce there is/might be. See 21.
-31. Glitch in parallel segments for bezier curves with cusps, once this is fixed, together with subdivision
-    rendering of Bezier curves with cusps should be *much* better. (DONE)
-32. Refactor the path abstraction. Need easier combination/building for paths, also converting geometric
+27. Implement subdivision of (rational) Bezier curves (partly DONE, for nonrational Bezier curves)
+28. Possibly remove nonrational Bezier curves/NUBS in favor of rational Beziers/NURBS, might have to look into
+    whether/how much of a performance differnce there is/might be. See 20.
+29. Refactor the path abstraction. Need easier combination/building for paths, also converting geometric
     objects into paths/pathSegments needs to be uniformized. Currently it's an absolute mess.
-    See 21.
+    See 20.
+30. Fix error in parallel segments which causes shit to fail if c==d for (rational) cubic beziers
+    just use the average of the start/end normals in this case idk mebi anyway (?)
