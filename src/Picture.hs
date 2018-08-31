@@ -15,10 +15,13 @@ import Geometry
 import Model
 import Stroke
 
-
+-- | Type class for objects which can be stroked, essentially to unify stroking of 'Path's, 'Contour's,
+--   and 'ClosedPath's
 class Strokable a where
+  -- | takes a 
   stroke :: StrokeStyle -> a -> ClosedPath
 
+-- | New type to turn a 'Pathable' object into a 'Strokable' object
 newtype AsPath a = AsPath {fromAsPath :: a}
 
 instance Pathable a => Strokable (AsPath a) where
@@ -38,6 +41,9 @@ instance Strokable Path where
 instance (Strokable a) => Strokable [a] where
   stroke ss f = concatMap (stroke ss) f
 
+-- | 'Filling' is the 
+--   class of objects that abstractly describe a filling strategy, so that they can be uniformly converted
+--   to 'Fill's
 class Filling a where 
   toFill :: a -> Fill
 
@@ -47,11 +53,11 @@ instance Filling Fill where
 instance Filling LRGBA where
   toFill = const
 
+-- | Allows an @'Fillable' a@ to be converted to a 'SimplePicture' by providing a 'Filling' or 'Fill'.
 class Fillable a where 
   fill :: Filling b => b -> a -> SimplePicture
   fill b = withFill (toFill b)
   withFill :: Fill -> a -> SimplePicture
-  
 
 instance Fillable Contour where
   withFill f cont = SimplePicture f [cont]
@@ -65,26 +71,52 @@ instance Strokable a => Fillable (Stroked a) where
 data Stroked a = Stroked StrokeStyle a
   deriving (Eq,Show,Read,Ord)
 
+-- | A simple picture is simply a 'Fill' and a 'ClosedPath'
 data SimplePicture = SimplePicture Fill ClosedPath
   --deriving (Eq,Show,Read,Ord)
 
 -- function from R2 -> [0,1]
+-- | A 'GradientF' represents a function from the plane to the interval. See 'Gradient' for more documentation.
 type GradientF = Point -> Double
 
+-- | A 'Gradient' is a function from the plane to the interval along with two colors (specified as
+--   'LRGBA's, a foreground color and background color. The color at a point in the plane is a convex 
+--   combination of the foreground and background colors, with the combination factor given by the
+--   'GradientF'. When the combination factor is 1, the color is the foreground color, and when it is 0, the
+--   color is the background color.
 data Gradient = Gradient GradientF LRGBA LRGBA
 
-gaussianGradient :: Point -> Matrix -> LRGBA -> LRGBA -> Gradient
+-- | clamps a double to within [0,1]
+clampZO :: Double -> Double
+clampZO x | x < 0 = 0
+          | x > 1 = 1
+          | otherwise = x
+
+-- | Produce a Gaussian 'Gradient'. Note that Gaussian pdfs can go over 1, so we clamp the pdf to [0,1].
+gaussianGradient :: Point -- ^ center of the Gaussian distribution
+                 -> Matrix -- ^ Gaussian coefficient matrix
+                 -> LRGBA -- ^ foreground color
+                 -> LRGBA -- ^ background color
+                 -> Gradient
 gaussianGradient cent mat = Gradient $ \pt -> 
   let
     v = pt -. cent
     s = (transpose v) *. mat *. v
   in
-    exp (-s^2)
+    clampZO $ exp (-s^2)
 
+-- | Produces a Gaussian 'Gradient' by taking elliptical radii and rotation data and converting that to
+--   a matrix with 'ellipseRadiiToMatrix' which is then passed to 'gaussianGradient'.
 gaussianGradientRadii :: Point -> (Double,Double,Double) -> LRGBA -> LRGBA -> Gradient
 gaussianGradientRadii cent rs = gaussianGradient cent (ellipseRadiiToMatrix rs)
 
-circularGaussian :: Point -> Double -> LRGBA -> LRGBA -> Gradient
+-- | Short hand for producing a circular Gaussian 'Gradient' with radius 
+-- (as interpreted by 'gaussianGradientRadii') given by the 'Double' parameter.
+circularGaussian :: Point -- ^ center of the Gaussian
+                 -> Double -- ^ radius of the Gaussian
+                 -> LRGBA -- ^ foreground color
+                 -> LRGBA -- ^ background color
+                 -> Gradient
 circularGaussian cent r = gaussianGradientRadii cent (r,r,0)
 
 instance Filling Gradient where 
@@ -97,20 +129,15 @@ instance Filling Gradient where
 instance GBounded SimplePicture where
   bounds (SimplePicture _ cp) = bounds cp
 
+-- | This type synonym defines a 'Picture' as a collection of 'SimplePicture's. The 'SimplePicture's are
+--   interpreted as the first 'SimplePicture' is the top 'SimplePicture' and the last 'SimplePicture' is the
+--   bottom 'SimplePicture'
 type Picture = [SimplePicture]
 
-tol :: Double
-tol = 1e-6
 
-orange :: LRGBA
-orange = LRGBA 1 0.4 0 1
-
-black :: LRGBA
-black = LRGBA 0 0 0 1
-
-white :: LRGBA
-white = LRGBA 1 1 1 1
-
+-- | Produces a 'Picture' for debugging a 'Contour'.
+--   It draws the 'controlPolygon' of a 'Contour' in a transparent red over the 'Contour' itself drawn in green,
+--   all over the fill of the 'Contour', filled in white.
 debugContour :: StrokeStyle -> Contour -> Picture
 debugContour str cont = 
   let
@@ -121,6 +148,23 @@ debugContour str cont =
     , fill (LRGBA 1 1 1 1) cont
     ]
 
+-- | used for 'penguin'
+tol :: Double
+tol = 1e-6
+
+-- | used for 'penguin'
+orange :: LRGBA
+orange = LRGBA 1 0.4 0 1
+
+-- | used for 'penguin'
+black :: LRGBA
+black = LRGBA 0 0 0 1
+
+-- | used for 'penguin'
+white :: LRGBA
+white = LRGBA 1 1 1 1
+
+-- | A test 'Picture' which draws a simple penguin. :)
 penguin :: Picture
 penguin =
   [ 

@@ -20,15 +20,24 @@ import Control.Lens ((^.))
 import qualified Data.Vector as V
 import Data.Vector ((!))
 
+-- | Represents a method of joining our new parallel 'PathSegment's at bends when stroking a 'Path'.
 data JoinType 
-  = MiterJoin Double 
+  -- | A 'MiterJoin' is created by extending the segments in straight lines in the tangent direction at
+  --   the end of the segment until they intersect forming a 
+  --   sharp point. 
+  = MiterJoin -- Double 
   -- Miter 0 is a sharp bend, and Miter 1 is a flat bend passing through the corner of the path
   -- jk the double will be the limit on the miter length. The miter can get arbitrarily long as we approach a
   -- cusp, so the double should cap it.
   -- jk, not quite sure what scaling to use... this is a pain
   -- maybe use SVG as a reference? uh duh. good idea self.
-  | BevelJoin Double
-  | BezierJoin Double -- essentially a miter join, but capped by a quadratic bezier instead of a sharp point
+  -- | Connects the two end points of the segments to be joined by a straight line.
+  | BevelJoin -- Double
+  -- | Uses the same three points as a 'MiterJoin', but uses the point of the 'MiterJoin' as the control point
+  --   of a 'Bezier2'.
+  | BezierJoin -- Double -- essentially a miter join, but capped by a quadratic bezier instead of a sharp point
+  -- | Joins the end points of the parallel segments 
+  --   with a circular arc centered at the original join 'Point's of the segments in the original 'Path'
   | RoundJoin -- joins with a circle
 -- 
 --  | ArcJoin Double 
@@ -38,48 +47,80 @@ data JoinType
   --  | CircleJoin -- TODO add circle arcs, then we can join with circles
   deriving (Show, Eq, Ord, Read)
 
+-- | Represents a way of capping paths at either end points or cusps (where joins typically fail).
+--   It needs to connect points on the opposite sides of a circle centered at the end point or cusp.
 data CapType
+  -- | A pointy cap with aspect ratio (cap height to half-width) given by the 'Double' argument. 
+  --   (0 is flat, 1 is 90 degree angle at the point, so height is equal to half the width)
   = PointCap Double -- Double -- The first double is the aspect ratio of the caps height to half-width
   -- (0 is flat, 1 is 90 degree angle at the point, so height is equal to half the width), the
   -- second is the distance of the cap from the end of the path, currently not using the second
   --  | CircleCap
+  -- | Produces a cap by drawing a perpendicular segment some distance away from the path, specified by the
+  --   double parameter. Again the parameter is the ratio of the height to the half-width. 
+  --   Thus @0.0@ means the cap passes through the end of the path (SVG's butt cap),
+  --   and @1.0@ gives a flat cap half the width of the cap away from the end of the path, which is 
+  --   SVG's square cap. Synonyms for these special cases are provided as 'buttCap' and 'squareCap'.
   | FlatCap Double -- capped by a flat segment. 0.0 means the cap passes through the end of the path, 1.0
-  | RoundCap
   -- means that the flat cap is strokeDistance away from the end of the path
   -- (That's SVG's square cap)
+  -- | Produces a semicircular arc to cap the path.
+  | RoundCap
   deriving (Show, Eq, Ord, Read)
 
+-- | @'FlatCap' 0@, see 'CapType'.
 buttCap :: CapType
 buttCap = FlatCap 0
 
+-- | @'FlatCap' 1@, see 'CapType'.
 squareCap :: CapType
 squareCap = FlatCap 1
 
+-- | Defines the style for stroking 'Path's and 'Contour's.
 data StrokeStyle = StrokeStyle
   { strokeDistance :: Double
+  -- ^ the distance of the stroke from the path, i.e. half the width of the stroke
   , joinType :: JoinType
+  -- ^ the type of join to use when needed
   , capType :: CapType
+  -- ^ the type of cap to use when needed
   , ellipseTolerance :: Double
+  -- ^ tolerance for converting ellipse matrices to radii
   , joinTolerance :: Double
+  -- ^ tolerance for determining whether a join is parallel (no join needed), or antiparallel 
+  --   (i.e. a cusp, so a cap is needed)
   , tangentTolerance :: Double
+  -- ^ tolerance for determining when the derivative at a point is zero, so we can compute the proper tangent
+  --   with fallback methods
   }
   deriving (Show, Eq, Ord, Read)
 
---(v`dot` norm1)=d
---(v`dot` norm2)=d
 
+-- | See 'PathSpec'.
+--   This basically just needs to be deleted, part of refactoring to be done.
+--   TODO.
 lPathStart :: ([PathSegment],Point) -> Point
 lPathStart (seg:_,_) = pSegStart seg
 lPathStart ([],cap) = cap
 
+-- | See 'PathSpec'.
+--   This basically just needs to be deleted, part of refactoring to be done.
+--   TODO.
 lPathEnd :: ([PathSegment],Point) -> Point
 lPathEnd = snd
 
+-- | See 'PathSpec'.
+--   This basically just needs to be deleted, part of refactoring to be done.
+--   TODO.
 lPathSegs :: ([PathSegment],Point) -> [PathSegment]
 lPathSegs = fst
 
 -- tang is the incoming tangent vector to the path end or cusp
-buildCap :: StrokeStyle -> Vector -> Point -> ([PathSegment],Point)
+-- | Builds a 'PathSpec' for a cap using a particular 'StrokeStyle'.
+buildCap :: StrokeStyle -- ^ style to build the cap in (uses 'capType' and 'strokeDistance')
+         -> Vector -- ^ the tangent vector at the end of the incoming segment to the cap
+         -> Point -- ^ the center of the cap
+         -> ([PathSegment],Point)
 buildCap ss tang center =
   let
     dist = strokeDistance ss
@@ -106,9 +147,13 @@ buildCap ss tang center =
       RoundCap ->
         ([makeCircleSegment p1 dist True (ellipseTolerance ss)],p2)
 
-
--- takes a tolerance
-buildJoin :: StrokeStyle -> Vector -> Vector -> Point -> ([PathSegment],Point)
+-- | Builds a 'PathSpec' for a join using a particular stroke style
+buildJoin :: StrokeStyle -- ^ style to build the join in
+                         -- (uses 'joinType', 'strokeDistance', and 'joinTolerance')
+          -> Vector -- ^ path normal at the end of the incoming path segment
+          -> Vector -- ^ path normal at the start of the outgoing path segment
+          -> Point -- ^ intersection point of the incoming and outgoing path segment
+          -> ([PathSegment],Point)
 buildJoin ss norm1 norm2 center = 
   let
     tol = joinTolerance ss
@@ -144,12 +189,12 @@ buildJoin ss norm1 norm2 center =
         if c > 0 -- norm2 is within +180 degrees of norm1, so this is an exterior join
         then
           case join of
-            BevelJoin s -> -- ignore scaling for now
+            BevelJoin -> -- s -> -- ignore scaling for now
               ([PathSeg p1], p2)
-            MiterJoin s -> -- ignore scaling for now.
+            MiterJoin -> --s -> -- ignore scaling for now.
               ([PathSeg p1, PathSeg pc],p2)
               --([], pc)
-            BezierJoin s -> -- ignore scaling for now
+            BezierJoin -> -- s -> -- ignore scaling for now
               ([PathBez2 p1 pc], p2)
             RoundJoin -> 
               ([makeCircleSegment p1 dist True (ellipseTolerance ss)],p2)
@@ -160,7 +205,14 @@ buildJoin ss norm1 norm2 center =
 -- takes the initial segment and the start and end of the desired new parallel segment
 -- as determined by buildJoin
 -- plus the distance 
-parallelSegment :: StrokeStyle -> WholePathSegment -> Point -> Point -> [PathSegment]
+-- | Computes an approximate parallel path to a given 'WholePathSegment'
+parallelSegment :: StrokeStyle -- ^ style to use to compute the parallel segment
+                               -- (uses 'strokeDistance', 'tangentTolerance')
+                -> WholePathSegment -- ^ the path segment to compute a parallel path to
+                                    -- (in the normal direction of course)
+                -> Point -- ^ start of the new parallel path (probably produced by 'buildCap' or 'buildJoin')
+                -> Point -- ^ end  of the new parallel path (probably produced by 'buildCap' or 'buildJoin')
+                -> [PathSegment]
 parallelSegment _ (WPathSeg _) s _ = [PathSeg s]
 parallelSegment ss seg@(WPathBez2 bez) s _ =
   let
@@ -325,7 +377,10 @@ parallelSegment ss (WPathEArc earc) s _ =
 
 
 -- IT WORKS!!!
-strokeExterior :: StrokeStyle -> Contour -> Contour
+-- | strokes the exterior of a 'Contour'
+strokeExterior :: StrokeStyle -- ^ style to stroke the 'Contour'\'s exterior in
+               -> Contour -- ^ the contour to stroke
+               -> Contour
 strokeExterior ss cont@Contour{contourSegs=cs} = 
   let
     --csegL = V.toList cs
@@ -349,16 +404,18 @@ strokeExterior ss cont@Contour{contourSegs=cs} =
   in 
     makeContour strokecs
 
+-- | A default 'StrokeStyle' for use in tests.
 strokeTestS :: StrokeStyle
 strokeTestS = StrokeStyle 1 (RoundJoin) (squareCap) 1e-7 1e-7 1e-7
 
-
+-- | A test 'Contour' for testing stroking 'Bezier2's
 strokeTestC :: Contour
 strokeTestC = makeContour 
   [ PathSeg (makePoint 10 10) 
   , PathBez2 (makePoint 110 10) (makePoint 60 110)
   ]
 
+-- | A test 'Contour' for testing stroking 'Bezier3's
 strokeTestC3 :: Contour
 strokeTestC3 = makeContour
   [ PathSeg (makePoint 10 10)
@@ -369,7 +426,11 @@ strokeTestC3 = makeContour
 -- stroke returns the inner and exterior contours (in that order)
 -- there are more efficient ways to do this, which should maybe be written later, but this has the benefit
 -- of being DRY, so *shrug*
-strokeContour :: StrokeStyle -> Contour -> (Contour, Contour)
+-- | Returns the inner and exterior 'Contour's of the stroke of a 'Contour'. Inner contour computed by
+--   computing the exterior contour of the reverse of the original contour.
+strokeContour :: StrokeStyle -- ^ style to stroke the 'Contour' with
+              -> Contour -- ^ the contour to stroke
+              -> (Contour, Contour) -- ^ @(innerContour,exteriorContour)@
 strokeContour s c = (strokeExterior s $ reverseC c, strokeExterior s c)
 
 -- easy modification of strokeExterior
@@ -377,7 +438,13 @@ strokeContour s c = (strokeExterior s $ reverseC c, strokeExterior s c)
 -- but do the modification first!
 -- think I need to somehow unify paths with contours.
 -- they behave basically the same for a lot of applications
-strokePathExterior :: StrokeStyle -> Point -> Point -> Path -> Path
+-- | Strokes the \"exterior\" of a 'Path', where by exterior we mean produces the half of the stroke between
+--   the caps in the normal direction.
+strokePathExterior :: StrokeStyle -- ^ style to stroke the 'Path' with.
+                   -> Point -- ^ start of the stroke's path, produced by building the caps of the stroke first.
+                   -> Point -- ^ end of the stroke's path
+                   -> Path -- ^ the path to stroke
+                   -> Path
 strokePathExterior ss st end path@Path{pathSegs=(ps,_)} = 
   let
     --csegL = V.toList cs
@@ -404,6 +471,7 @@ strokePathExterior ss st end path@Path{pathSegs=(ps,_)} =
     makePath strokecs end
 
 -- strokes the path
+-- | produces the 'Contour' bounding the stroke of the 'Path'
 strokePath :: StrokeStyle -> Path -> Contour
 strokePath ss p =
   let
