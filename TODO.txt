@@ -3,19 +3,47 @@ Also going to start prioritizing (short term priorities) Also a lot of repeats h
 
 Urgent:
 High:
-1. Implement subdivision of (rational) Bezier curves (DONE)
-2. Add conversion to/from the standard interpolation basis in Polynomial.hs
+1. Add conversion to/from the standard interpolation basis in Polynomial.hs
    (Partly DONE) added st int to bezier basis, and computed the matrices for the other transformations
-3. Improve stroking, particularly where Tiller-Hanson breaks down.
+2. Improve stroking, particularly where Tiller-Hanson breaks down.
    Primarily near loops/self intersections of cubic beziers and degenerate (i.e. linear)
    quadratic/cubic beziers
-4. Deal with cusps properly. Probably subdivide, figure out how to get tangents and normals at cusps, and 
+3. Deal with cusps properly. Probably subdivide, figure out how to get tangents and normals at cusps, and 
    then cap the resulting join (if the tangents are antiparallel ofc). I suppose we could have a sharp point
    that isn't a cusp. (Do math xD)
    (More or less done,
    but frankly, this doesn't work very well for handling the related problem of near cusps)
-5. Improve Rasterization to only rasterize an object within its bounding box. 
-6. Start documenting code
+4. Improve Rasterization to only rasterize an object within its bounding box. 
+5. First draft documentation of code.
+   Progress
+     Done:
+       MathClasses,
+       Picture,
+       Polynomial,
+       PolynomialSolver,
+       Stroke,
+     Started:
+       Geometry.Bezier,
+     Undocumented:
+       Font,
+       Model,
+       Rasterizer,
+       Scanner,
+       Utils,
+       Geometry,
+       Geometry.Affine,
+       Geometry.BSpline,
+       Geometry.CommonPaths,
+       Geometry.Curve,
+       Geometry.Curve.Types,
+       Geometry.Ellipse,
+       Geometry.Parametrized,
+       Geometry.Path,
+       Geometry.PathBuilder,
+       Geometry.PolyLine,
+       Geometry.Region,
+       Geometry.Region.Types,
+       Geometry.Types,
 Medium:
 1. Refactor the Path/Contour/ClosedPath abstraction. 
    ClosedPath isn't a great abstraction. Also it would be great to provide a more unified interface to 
