@@ -36,6 +36,7 @@ computeBez2Coeffs (s,c,e) = (e-2*c+s,-2*s+2*c,s)
 computeBez3Coeffs :: (Double,Double,Double,Double) -> (Double,Double,Double,Double)
 computeBez3Coeffs (s,c,d,e) = (-s+3*c-3*d+e,3*s-6*c+3*d,-3*s+3*c,s)
 
+-- | Produces a 'Bezier2' from coefficients for @x@ and @y@
 bezierFromCoeffs2 :: QuadPoly -> QuadPoly -> Bezier2
 bezierFromCoeffs2 xs ys = 
   let
@@ -45,17 +46,20 @@ bezierFromCoeffs2 xs ys =
     makeBezier2 (makePoint sx sy) (makePoint cx cy) (makePoint ex ey)
 
 -- the x coefficients must be for xh
-{-
+-- | Produces an 'RBezier2' from coefficients for homogeneous @x@, homogeneous @y@, and @w@.
 rbezierFromCoeffs2 :: QuadPoly -> QuadPoly -> QuadPoly -> RBezier2
 rbezierFromCoeffs2 xhs yhs ws = 
   let
-    (sx,cx,ex) = stdToBezBasis2 xs
-    (sy,cy,ey) = stdToBezBasis2 ys
+    (sxh,cxh,exh) = stdToBezBasis2 xhs
+    (syh,cyh,eyh) = stdToBezBasis2 yhs
     (sw,cw,ew) = stdToBezBasis2 ws
   in
-    makeBezier2 (makePoint sx sy) (makePoint cx cy) (makePoint ex ey)
--}
+    makeRBezier2
+      (makePoint (sxh/sw) (syh/sw),sw)
+      (makePoint (cxh/cw) (cyh/cw),cw)
+      (makePoint (exh/ew) (eyh/ew),ew)
 
+-- | Produces a 'Bezier3' from coefficients for @x@ and @y@
 bezierFromCoeffs3 :: CubPoly -> CubPoly -> Bezier3
 bezierFromCoeffs3 xs ys = 
   let
@@ -64,19 +68,63 @@ bezierFromCoeffs3 xs ys =
   in
     makeBezier3 (makePoint sx sy) (makePoint cx cy) (makePoint dx dy) (makePoint ex ey)
 
-restrictTo2 :: (Double,Double) -> Bezier2 -> Bezier2
+-- | Produces an 'RBezier3' from coefficients for homogeneous @x@, homogeneous @y@, and @w@.
+rbezierFromCoeffs3 :: CubPoly -> CubPoly -> CubPoly -> RBezier3
+rbezierFromCoeffs3 xhs yhs ws = 
+  let
+    (sxh,cxh,dxh,exh) = stdToBezBasis3 xhs
+    (syh,cyh,dyh,eyh) = stdToBezBasis3 yhs
+    (sw,cw,dw,ew) = stdToBezBasis3 ws
+  in
+    makeRBezier3
+      (makePoint (sxh/sw) (syh/sw),sw)
+      (makePoint (cxh/cw) (cyh/cw),cw)
+      (makePoint (dxh/dw) (dyh/dw),dw)
+      (makePoint (exh/ew) (eyh/ew),ew)
+
+-- | Restricts (or even expands) a quadratic Bezier to a particular interval of parameter values
+restrictTo2 :: (Double,Double) -- ^ @(intervalStart,intervalEnd)@
+            -> Bezier2 -> Bezier2
 restrictTo2 (st,ed) bez = 
   let
     l = (ed-st,st)
   in
     bezierFromCoeffs2 (composeQuadLin (xCoeffs2 bez) l) (composeQuadLin (yCoeffs2 bez) l)
 
-restrictTo3 :: (Double,Double) -> Bezier3 -> Bezier3
+-- | Restricts (or even expands) a cubic Bezier to a particular interval of parameter values
+restrictTo3 :: (Double,Double) -- ^ @(intervalStart,intervalEnd)@
+            -> Bezier3 -> Bezier3
 restrictTo3 (st,ed) bez = 
   let
     l = (ed-st,st)
   in
     bezierFromCoeffs3 (composeCubLin (xCoeffs3 bez) l) (composeCubLin (yCoeffs3 bez) l)
+
+-- | Restricts (or even expands) a rational quadratic Bezier to a particular interval of parameter values
+restrictToR2 :: (Double,Double) -- ^ @(intervalStart,intervalEnd)@
+             -> RBezier2
+             -> RBezier2
+restrictToR2 (st,ed) rbez = 
+  let
+    l = (ed-st,st)
+  in
+    rbezierFromCoeffs2
+      (composeQuadLin (rxCoeffs2 rbez) l)
+      (composeQuadLin (ryCoeffs2 rbez) l)
+      (composeQuadLin (rzCoeffs2 rbez) l)
+
+-- | Restricts (or even expands) a rational cubic Bezier to a particular interval of parameter values
+restrictToR3 :: (Double,Double) -- ^ @(intervalStart,intervalEnd)@
+             -> RBezier3 
+             -> RBezier3
+restrictToR3 (st,ed) rbez = 
+  let
+    l = (ed-st,st)
+  in
+    rbezierFromCoeffs3
+      (composeCubLin (rxCoeffs3 rbez) l)
+      (composeCubLin (ryCoeffs3 rbez) l)
+      (composeCubLin (rzCoeffs3 rbez) l)
 
 -- for laziness reasons, (in the nontechnical sense), I'm going to implement this in terms of restrictTo3 
 -- rather than appropriately computing all the points, though that (done well)
@@ -85,14 +133,48 @@ restrictTo3 (st,ed) bez =
 -- around internal subdivision points, which have restrictions placed on them by continuity and smoothness.
 -- TODO: Take advantage of restrictions to make this more efficient
 -- assumes the list of doubles is sorted in increasing order and contains 0 and 1
-subdivideBezier3 :: [Double] -> Bezier3 -> [Bezier3]
+-- | Subdivides a 'Bezier3' into a list of 'Bezier3's at the points provided.
+--
+--   __Requires:__ Zero and one must be in the list, and it must be sorted in increasing order.
+subdivideBezier3 :: [Double] -- ^ the points to subdivide the Bezier at
+                 -> Bezier3 -- ^ the cubic Bezier to subdivide
+                 -> [Bezier3] -- ^ the subdivided curves
 subdivideBezier3 ks bez = map (flip restrictTo3 bez) $ zip ks (tail ks)
 
-subdivideBezier2 :: [Double] -> Bezier2 -> [Bezier2]
+-- | Subdivides a 'Bezier2' into a list of 'Bezier2's at the points provided.
+--
+--   __Requires:__ Zero and one must be in the list, and it must be sorted in increasing order.
+subdivideBezier2 :: [Double]  -- ^ the points to subdivide the Bezier at
+                 -> Bezier2 -- ^ the quadratic Bezier to subdivide
+                 -> [Bezier2] -- ^ the subdivided curves
 subdivideBezier2 ks bez = map (flip restrictTo2 bez) $ zip ks (tail ks)
 
+-- | Subdivides a 'RBezier3' into a list of 'RBezier3's at the points provided.
+--
+--   __Requires:__ Zero and one must be in the list, and it must be sorted in increasing order.
+subdivideRBezier3 :: [Double] -- ^ the points to subdivide the rational Bezier at
+                  -> RBezier3 -- ^ the cubic rational Bezier to subdivide
+                  -> [RBezier3] -- ^ the subdivided curves
+subdivideRBezier3 ks rbez = map (flip restrictToR3 rbez) $ zip ks (tail ks)
+
+-- | Subdivides a 'RBezier2' into a list of 'RBezier2's at the points provided.
+--
+--   __Requires:__ Zero and one must be in the list, and it must be sorted in increasing order.
+subdivideRBezier2 :: [Double]  -- ^ the points to subdivide the rational Bezier at
+                  -> RBezier2 -- ^ the quadratic rational Bezier to subdivide
+                  -> [RBezier2] -- ^ the subdivided curves
+subdivideRBezier2 ks rbez = map (flip restrictToR2 rbez) $ zip ks (tail ks)
+
+-- | Type synonym representing a weighted point. Alternatively, if this is the point @((x,y),w)@, this 
+--   represents the point in projective space with homogeneous coordinates @[xw:yw:w]@.
 type WPoint = (Point,Double)
 
+-- | Correctly transform weighted points by affine transformations. Equivalent to transforming the
+--   corresponding projective
+--   point by the corresponding projective transformation.
+--
+--   Might be better to remove the instance @('Geometric' a, 'Functor' f) => 'Geometric' (f a)@, and
+--   make 'WPoint' an instance of 'Geometric', but this is under consideration. TODO.
 transformWPoint :: Affine -> WPoint -> WPoint
 transformWPoint aff = over _1 (transform aff)
 
@@ -102,11 +184,13 @@ instance Geometric (Point,Double) where
   transform aff (pt,w) = (transform aff pt,w)
 -}
 
+-- | A rational quadratic Bezier. TODO: expand documentation
 data RBezier2 = RBezier2
   { rstart2 :: WPoint -- point and weight (NOT HOMOGENEOUS COORDINATES!)
   , rcontrol2 :: WPoint
   , rend2 :: WPoint
-  , rxCoeffs2 :: (Double,Double,Double)
+  , rxCoeffs2 :: (Double,Double,Double) 
+    -- TODO rename xhCoeffs to make it clear that these are the coefficients of the homogeneous x coordinate.
   , ryCoeffs2 :: (Double,Double,Double)
   , rzCoeffs2 :: (Double,Double,Double)
   , rboundingBox2 :: Box -- this is only valid when the weights are positive

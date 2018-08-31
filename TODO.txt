@@ -3,7 +3,7 @@ Also going to start prioritizing (short term priorities) Also a lot of repeats h
 
 Urgent:
 High:
-1. Implement subdivision of (rational) Bezier curves (partly DONE, for nonrational Bezier curves)
+1. Implement subdivision of (rational) Bezier curves (DONE)
 2. Add conversion to/from the standard interpolation basis in Polynomial.hs
    (Partly DONE) added st int to bezier basis, and computed the matrices for the other transformations
 3. Improve stroking, particularly where Tiller-Hanson breaks down.
