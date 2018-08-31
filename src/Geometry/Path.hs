@@ -24,7 +24,8 @@ import Data.Vector ((!),imap,Vector)
 import Data.Maybe (fromMaybe)
 
 import Control.Lens ((^.))
---import Data.List.Nonempty
+
+import qualified Data.List as L
 
 
 data PathSegment
@@ -41,6 +42,12 @@ makeArcSegment s = PathEArc s . ellipseRadiiToMatrix
 
 makeCircleSegment :: Point -> Double -> Bool -> Double -> PathSegment
 makeCircleSegment s rad fS tol = makeArcSegment s (rad,rad,0) False fS tol
+
+makeBez2Seg :: Bezier2 -> PathSegment
+makeBez2Seg bez = PathBez2 (start2 bez) (control2 bez)
+
+makeBez3Seg :: Bezier3 -> PathSegment
+makeBez3Seg bez = PathBez3 (start3 bez) (stCont3 bez) (endCont3 bez)
 
 makeRBez2Seg :: WPoint -> WPoint -> Double -> PathSegment
 makeRBez2Seg (s,sw) (c,cw) ew = PathRBez2 (s,sw/ew) (c,cw/ew)
@@ -72,6 +79,11 @@ pSegStart (PathBez3 s _ _) = s
 pSegStart (PathRBez2 (s,sw) _) = s
 pSegStart (PathRBez3 (s,sw) _ _) = s
 pSegStart (PathEArc s _ _ _ _) = s
+
+removeSndIf :: (a -> a -> Bool) -> [a] -> [a]
+removeSndIf f [] = []
+removeSndIf f [x] = [x]
+removeSndIf f (x:y:xs) = if f x y then x:(removeSndIf f xs) else x:(removeSndIf f (y:xs))
 
 data WholePathSegment 
   = WPathSeg !Segment
@@ -155,7 +167,9 @@ simplifyWPSeg tol seg@(WPathBez2 bez) =
             ([PathSeg s],e)
     else
       toPathSpec seg
--- TODO: implement this later
+-- TODO: make this handle small loops and generally self intersections better,
+-- tho this does detect cusps :)
+-- but it doesn't detect linearity.
 simplifyWPSeg tol seg@(WPathBez3 bez) = 
   let
     s = start3 bez
@@ -168,19 +182,25 @@ simplifyWPSeg tol seg@(WPathBez3 bez) =
     yps@(d2,d1,d0) = derivCoeffsCubic ys
     -- uhoh what abt repeated roots?? TODO
     inrange r t = -r <= t && t <= 1+r
-    xprs = filter (inrange tol) $ solveQuadratic xps
-    yprs = filter (inrange tol) $ solveQuadratic yps
+    xprs = filter (inrange tol) $ solveQuadraticTol tol xps
+    yprs = filter (inrange tol) $ solveQuadraticTol tol yps
     -- cusp candidates
     -- the filter is because we don't want to subdivide if the cusp is at the end of the interval, which is
     -- ok.
     cuspcs = filter (inrange (-tol)) [ (t1+t2)/2 | t1 <- xprs, t2 <- yprs, abs (t1-t2) < tol ]
+    cusps = removeSndIf (\x y -> abs (x-y) < tol && y /= 1) $ 0:(L.sort (1:cuspcs))
   in
     if abs a3 < tol && abs b3 < tol -- this is a quadratic bezier in disguise, convert it and simplify
     then
       simplifyWPSeg tol (WPathBez2 (bezierFromCoeffs2 (a2,a1,a0) (b2,b1,b0)))
     else
       -- subdivide at cusp candidates
-      toPathSpec seg
+      -- toPathSpec seg
+      if cusps == [0,1]
+      then
+        ([makeBez3Seg bez],e)
+      else
+        (map makeBez3Seg $ subdivideBezier3 cusps bez, e)
 simplifyWPSeg tol seg@(WPathRBez2 rbez) = 
   let
     (s,sw) = rstart2 rbez

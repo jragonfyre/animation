@@ -196,8 +196,17 @@ parallelSegment ss seg@(WPathBez3 bez) s _ =
     --norm1 = perpendicular . normalize $ pc -. ps
     --norm3 = perpendicular . normalize $ pe -. pd
     norm1 = startNormal ttol seg
-    norm2 = perpendicular . normalize $ pd -. pc -- uhoh, this can't possibly be good... TODO fix
     norm3 = endNormal ttol seg
+    norm2 =
+      let
+        nvec2 =  pd -. pc
+        l2 = vectorNorm nvec2
+      in
+        if l2 < ttol
+        then
+          (rotate ((angleFrom norm1 norm3)/2)) *. norm1
+        else
+          perpendicular $ (1/l2) *. nvec2
     dVec = makeVector d d
     mat1 = transpose $ makeMatrix norm1 norm2
     c1 = det mat1 -- norm1 `cross` norm2 
@@ -258,8 +267,18 @@ parallelSegment ss seg@(WPathRBez3 rbez) s _ =
     (pd,dw) = rendCont3 rbez
     (pe,ew) = rend3 rbez
     norm1 = startNormal ttol seg
-    norm2 = perpendicular . normalize $ pd -. pc -- uhoh, this can't possibly be good... TODO fix
     norm3 = endNormal ttol seg
+    --norm2 = perpendicular . normalize $ pd -. pc -- uhoh, this can't possibly be good... TODO fix
+    norm2 =
+      let
+        nvec2 =  pd -. pc 
+        l2 = vectorNorm nvec2
+      in
+        if l2 < ttol
+        then
+          (rotate ((angleFrom norm1 norm3)/2)) *. norm1
+        else
+          perpendicular $ (1/l2) *. nvec2
     --norm1 = perpendicular . normalize $ pc -. ps
     --norm2 = perpendicular . normalize $ pd -. pc
     --norm3 = perpendicular . normalize $ pe -. pd

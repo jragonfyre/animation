@@ -9,6 +9,7 @@ module PolynomialSolver
   ( module PolynomialSolver
   ) where
 
+import Polynomial
 
 mathSign :: Double -> Double
 mathSign x | x < 0 = -1
@@ -17,7 +18,9 @@ mathSign x | x < 0 = -1
 cubeRoot :: Double -> Double
 cubeRoot t = (mathSign t) * ((abs t) ** (1/3))
 
+
 -- using trig/hyperbolic method from wiki (cubic function)
+-- requires a /= 0
 solveCubic :: (Double, Double, Double, Double) -> [Double]
 solveCubic (a,b,c,d) = 
   let
@@ -30,6 +33,33 @@ solveCubic (a,b,c,d) =
     q = (2/27)*bn*bn2 - (bn*cn/3) + dn
   in
     map (+diff) $ solveDepressedCubic (p,q)
+
+solveCubicTol :: Double -> CubPoly -> [Double]
+solveCubicTol tol (a,b,c,d) = 
+  if abs a < tol
+  then 
+    solveQuadraticTol tol (b,c,d)
+  else
+    solveCubic (a,b,c,d)
+
+solveQuadraticTol :: Double -> QuadPoly -> [Double]
+solveQuadraticTol tol (a,b,c) =
+  if abs a < tol
+  then
+    solveLinearTol tol (b,c)
+  else
+    solveQuadratic (a,b,c)
+
+solveLinearTol :: Double -> LinPoly -> [Double]
+solveLinearTol tol (a,b) = 
+  if abs a < tol
+  then
+    []
+  else
+    solveLinear (a,b)
+
+solveLinear :: LinPoly -> [Double]
+solveLinear (a,b) = [-b/a]
 
 solveDepressedCubic :: (Double, Double) -> [Double]--([Double],[Double])
 solveDepressedCubic (p,q) = 

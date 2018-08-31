@@ -167,14 +167,14 @@ derivativeEArc earc t =
 indicate :: Bool -> Double
 indicate True = 1
 indicate False = 0
--}
 
 sign :: Double -> Double
 sign x | x >= 0 = 1.0
        | otherwise = -1.0
+-}
 
 angle :: Vector -> Vector -> Double
-angle u v = (sign (cross u v)) * (acos $ max (-1) $ min 1 ((u`dot`v)/((vectorNorm u) * (vectorNorm v))))
+angle  = angleFrom
 
 xVec :: Vector
 xVec = makeVector 1 0

@@ -9,7 +9,7 @@ module Polynomial
   ( module Polynomial
   ) where
 
-import Geometry.Affine
+import MathClasses
 
 type CPoly = Double
 type LinPoly = (Double,Double)

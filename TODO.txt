@@ -1,69 +1,82 @@
+notes. I'm going to stop updating the numbers when I remove completed tasks, since it's a lot of work.
+Also going to start prioritizing (short term priorities) Also a lot of repeats here, gonna start merging them
+
+Urgent:
+High:
+27. Implement subdivision of (rational) Bezier curves (partly DONE, for nonrational Bezier curves)
+24. Add conversion to/from the standard interpolation basis in Polynomial.hs
+    (Partly DONE) added st int to bezier basis, and computed the matrices for the other transformations
 1. Improve stroking, particularly where Tiller-Hanson breaks down.
-2. Consider adding circular/elliptical contours as standalone contours not built out of path segments.
+   Primarily near loops/self intersections of cubic beziers and degenerate (i.e. linear)
+   quadratic/cubic beziers
+12. Deal with cusps properly. Probably subdivide, figure out how to get tangents and normals at cusps, and 
+    then cap the resulting join (if the tangents are antiparallel ofc). I suppose we could have a sharp point
+    that isn't a cusp. (Do math xD)
+    (More or less done,
+    but frankly, this doesn't work very well for handling the related problem of near cusps)
+8. Improve Rasterization to only rasterize an object within its bounding box. 
+Medium:
+6. Refactor the Path/Contour/ClosedPath abstraction. 
+   ClosedPath isn't a great abstraction. Also it would be great to provide a more unified interface to 
+   Path/Contours. It's nice to have a type level distinction between the concepts, but they also behave very 
+   similarly for most things
+20. Refactor everything. Like the path abstraction has gotten a bit complicated, since there are so many
+    different kinds of paths. Might want to just get rid of non-rational Bezier curves, since they are 
+    entirely subsumed by rational Bezier curves
+21. Possibly reimplement circular/elliptical arcs in terms of NURBS
+    Related to 20. Not sure abt this one?
+29. Refactor the path abstraction. Need easier combination/building for paths, also converting geometric
+    objects into paths/pathSegments needs to be uniformized. Currently it's an absolute mess.
+    See 20 also 10.
+10. Implement more operations on paths and contours, e.g. rotation of contours
+31. Massive refactor needed to remove code duplication everywhere.
+    also to reorganize the Module/File structure
+    Also remove/delete deprecated code stuffs
+22. Add NURBS contours, i.e. a NURBS with domain the circle, it has the added benefit that 
+    #knots = #control points, regardless of degree or anything, though it admittedly isn't clear how knots and
+    control points are directly related in this case. It's just that there are #knots rotations of any
+    continguous subset of the control points
+25. Improve accuracy of bounding boxes computed for beziers/rational beziers
+26. Allow negative weights (as long as it doesn't produce a weight of 0 on the interval) for 
+    rational beziers/nurbs, and allow computation of their bounding boxes 
+Low:
 3. Write functions to generate paths out of primitives.
    E.g. makeRoundRect Stuff -> Contour
    Update: This has been started, but we need to add more shapes.
 4. Make PathBuilder a Writer monad, so that we can use do notation to write paths, would be *super* elegent 
    to use. Or something. Writer doesn't *quite* work as I need.
 5. Create composite objects out of contours and whatnot
-6. Refactor the Path/Contour/ClosedPath abstraction. 
-   ClosedPath isn't a great abstraction. Also it would be great to provide a more unified interface to 
-   Path/Contours. It's nice to have a type level distinction between the concepts, but they also behave very 
-   similarly for most things
-7. Fix font loading. Either edit FontyFruity to fix loading of certain fonts. Possibly the issue is properly
-   checking flags for on/off curve points.
-   Or write my own ttf loader. I will probably eventually write a ttf loader, since I will also want an otf
-   loader.
-8. Improve Rasterization to only rasterize an object within its bounding box. 
+   What did I even mean by that? Oh perhaps something like the picture thing. Dunno.
 9. Improve small scale rasterization (i.e. for fonts at low pixel sizes)
-10. Implement more operations on paths and contours, e.g. rotation of contours
-11. Add biarcs, biarc fitting to types of paths? They're apparently a *lot* simpler for a lot of things,
-    in particular offset curves of biarc curves are biarc curves.
-12. Deal with cusps properly. Probably subdivide, figure out how to get tangents and normals at cusps, and 
-    then cap the resulting join (if the tangents are antiparallel ofc). I suppose we could have a sharp point
-    that isn't a cusp. (Do math xD)
-13. Fix antialiasing. Fixing a bug in antialiasing where overlapping contours didn't render properly
-    introduced a new bug where the right side of shapes don't antialias properly.
-    (Not sure if this got fixed or not, but I'm not presently noticing issues with antialiasing.)
-    Marking: (DONE)
-14. Fix an apparent bug with stroking ellipses (though I don't have a good example,
-    but it shows up with (100,50,pi/3) and a strokeWidth of 15)
-    (Update: DONE, don't remember what the bug was)
-15. Add more types of splines. E.g. NURBS. (Could then unify the other types of curves under nurbs maybe?,
-    though perhaps more efficient rn)
-    I understand more now. B-splines are basis splines. 
-    (DONE)
-16. Never compare floats for equality. Pretty urgent. This is a huge source of bugs. Just fixed one in the 
-    build join function causing massive streaking and glitching.
-17. Glitch when stroking sharp interior bends, see Q with a stroke distance of 40.
 18. Add implicit polynomial (I mean polynomial in x) contours (i.e. the level set of a differentiable 
     function in x and y which is at most a cubic polynomial in x when y is fixed.)
     Then we could solve for x, and also compute the normal to the contour at any given point (since we know the
     gradient). Thus the scan rasterizer could rasterize such a contour. Need to be careful with how we define
     orientation, but I think it could work. This would be a solution to 2 above, as well as being sooooo much
     more general. Could do soooo much cool shit with this. 
-19. Related to 19. Add general parametric paths which are polynomial in y. Like fun fact, the scan rasterizer
+19. Related to 18. Add general parametric paths which are polynomial in y. Like fun fact, the scan rasterizer
     doesn't give a shit what x is doing as long as we can solve for y, and take appropriate derivatives.
-20. Refactor everything. Like the path abstraction has gotten a bit complicated, since there are so many
-    different kinds of paths. Might want to just get rid of non-rational Bezier curves, since they are 
-    entirely subsumed by rational Bezier curves
-21. Possibly reimplement circular/elliptical arcs in terms of NURBS
-    Related to 20. Not sure abt this one?
-22. Add NURBS contours, i.e. a NURBS with domain the circle, it has the added benefit that 
-    #knots = #control points, regardless of degree or anything, though it admittedly isn't clear how knots and
-    control points are directly related in this case. It's just that there are #knots rotations of any
-    continguous subset of the control points
-23. Add SVG loading/rendering
-24. Add conversion to/from the standard interpolation basis in Polynomial.hs
-    (Partly DONE) added st int to bezier basis, and computed the matrices for the other transformations
-25. Improve accuracy of bounding boxes computed for beziers/rational beziers
-26. In fact, allow negative weights (as long as it doesn't produce a weight of 0 on the interval) for 
-    rational beziers/nurbs, and allow computation of their bounding boxes 
-27. Implement subdivision of (rational) Bezier curves (partly DONE, for nonrational Bezier curves)
 28. Possibly remove nonrational Bezier curves/NUBS in favor of rational Beziers/NURBS, might have to look into
     whether/how much of a performance differnce there is/might be. See 20.
-29. Refactor the path abstraction. Need easier combination/building for paths, also converting geometric
-    objects into paths/pathSegments needs to be uniformized. Currently it's an absolute mess.
-    See 20.
+23. Add SVG loading/rendering
+17. Glitch when stroking sharp interior bends, see Q with a stroke distance of 40.
+16. Never compare floats for equality. Pretty urgent. This is a huge source of bugs. Just fixed one in the 
+    build join function causing massive streaking and glitching. (Mostly done)
+Don't do now:
+2. Consider adding circular/elliptical contours as standalone contours not built out of path segments.
+   This right now is not a good idea, as it seems like it will only result in further code sprawl
+11. Add biarcs, biarc fitting to types of paths? They're apparently a *lot* simpler for a lot of things,
+    in particular offset curves of biarc curves are biarc curves.
+7. Fix font loading. Either edit FontyFruity to fix loading of certain fonts. Possibly the issue is properly
+   checking flags for on/off curve points.
+   Or write my own ttf loader. I will probably eventually write a ttf loader, since I will also want an otf
+   loader.
+
+Uncategorized:
+13. Fix antialiasing. Fixing a bug in antialiasing where overlapping contours didn't render properly
+    introduced a new bug where the right side of shapes don't antialias properly.
+    (Not sure if this got fixed or not, but I'm not presently noticing issues with antialiasing.)
+    Marking: (DONE)
 30. Fix error in parallel segments which causes shit to fail if c==d for (rational) cubic beziers
     just use the average of the start/end normals in this case idk mebi anyway (?)
+    (DONE)

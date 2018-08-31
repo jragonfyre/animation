@@ -5,10 +5,14 @@
 -- Distributed under terms of the MIT license.
 --
 
-module Geometry.Affine where
+module Geometry.Affine 
+  ( module Geometry.Affine
+  , module MathClasses
+  ) where
 
 import Geometry.Types
 import PolynomialSolver
+import MathClasses
 
 import Control.Lens (over, (&), (^.), (%~), from, each, (^..), (*~), (+~), (-~), allOf)
 import Control.Lens.Traversal
@@ -16,24 +20,6 @@ import Control.Lens.Traversal
 import Data.Maybe (mapMaybe)
 
 import Utils
-
-class Summable a b c | a b -> c where
-  infixl 6 +.
-  (+.) :: a -> b -> c
-
-class Subtractable a b c | a b -> c where
-  infixl 6 -.
-  (-.) :: a -> b -> c
-
-class Multiplicable a b c | a b -> c where
-  infixr 7 *.
-  (*.) :: a -> b -> c
-
-class Negatable a where
-  negify :: a -> a
-
-class Zeroable a where
-  zero :: a
 
 class Geometric a where
   transform :: Affine -> a -> a
@@ -50,9 +36,6 @@ instance Traversable t => Pointed (t Point) where
 instance Pointed a => Geometric a where
   transform aff pted = pted & pointsOf %~ (aff *.)
 -}
-
-class Unitable a where
-  unit :: a
 
 class Transposable a b | a -> b where
   transpose :: a -> b
@@ -89,18 +72,6 @@ deriving instance Negatable Covector
 instance Negatable Matrix where
   negify mat = mat & each %~ negify
 
-instance Summable Double Double Double where 
-  (+.) = (+)
-instance Multiplicable Double Double Double where
-  (*.) = (*)
-instance Zeroable Double where
-  zero = 0
-instance Negatable Double where
-  negify = negate
-instance Unitable Double where
-  unit = 1
-instance Subtractable Double Double Double where
-  (-.) = \x y -> (x-y)
 instance Summable Vector Vector Vector where
   --(+.) :: Vector -> Vector -> Vector
   (+.) v1 v2 = v1 & x +~ (v2 ^. x) & y +~ (v2 ^. y)
@@ -342,6 +313,13 @@ pointToAngle :: Point -> Double
 pointToAngle pt
   | pt^.y > 0 = acos (pt^.x)
   | otherwise = -(acos (pt^.x))
+
+sign :: Double -> Double
+sign x | x >= 0 = 1
+       | otherwise = -1
+
+angleFrom :: Vector -> Vector -> Double
+angleFrom u v = (sign (cross u v)) * (acos $ max (-1) $ min 1 ((u`dot`v)/((vectorNorm u) * (vectorNorm v))))
 
 segmentWinding :: Segment -> Point -> Double
 segmentWinding seg pt = 
