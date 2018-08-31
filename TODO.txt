@@ -1,8 +1,8 @@
 notes. I'm going to stop updating the numbers when I remove completed tasks, since it's a lot of work.
 Also going to start prioritizing (short term priorities) Also a lot of repeats here, gonna start merging them
 
-Urgent:
-High:
+Urgent: (0 total)
+High: (4 total)
 1. Improve stroking, particularly where Tiller-Hanson breaks down.
    Primarily near loops/self intersections of cubic beziers and degenerate (i.e. linear)
    quadratic/cubic beziers
@@ -42,7 +42,7 @@ High:
        Geometry.Region,
        Geometry.Region.Types,
        Geometry.Types,
-Medium:
+Medium: (7 total)
 1. Refactor the Path/Contour/ClosedPath abstraction. 
    ClosedPath isn't a great abstraction. Also it would be great to provide a more unified interface to 
    Path/Contours. It's nice to have a type level distinction between the concepts, but they also behave very 
@@ -64,7 +64,7 @@ Medium:
 6. Improve accuracy of bounding boxes computed for beziers/rational beziers
 7. Allow negative weights (as long as it doesn't produce a weight of 0 on the interval) for 
    rational beziers/nurbs, and allow computation of their bounding boxes 
-Low:
+Low: (10 total)
 1. Write functions to generate paths out of primitives.
    E.g. makeRoundRect Stuff -> Contour
    Update: This has been started, but we need to add more shapes.
