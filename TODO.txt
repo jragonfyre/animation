@@ -4,7 +4,7 @@ Also going to start prioritizing (short term priorities) Also a lot of repeats h
 Urgent:
 High:
 1. Add conversion to/from the standard interpolation basis in Polynomial.hs
-   (Partly DONE) added st int to bezier basis, and computed the matrices for the other transformations
+   (DONE)
 2. Improve stroking, particularly where Tiller-Hanson breaks down.
    Primarily near loops/self intersections of cubic beziers and degenerate (i.e. linear)
    quadratic/cubic beziers
