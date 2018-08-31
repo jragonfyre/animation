@@ -11,9 +11,13 @@ module Polynomial
 
 import MathClasses
 
+-- | Type synonym for a constant polynomial
 type CPoly = Double
+-- | Type synonym for a linear polynomial
 type LinPoly = (Double,Double)
+-- | Type synonym for a quadratic polynomial
 type QuadPoly = (Double,Double,Double)
+-- | Type synonym for a cubic polynomial
 type CubPoly = (Double,Double,Double,Double)
 
 instance Summable LinPoly LinPoly LinPoly where
@@ -53,18 +57,25 @@ instance Zeroable CubPoly where
 instance Unitable CubPoly where
   unit = (0,0,0,1)
 
+-- | evaluates a linear polynomial at a point 't'
 evalLinear :: LinPoly -> Double -> Double
 evalLinear (a1,a0) t = t*a1+a0
 
+-- | evaluates a quadratic polynomial at a point 't'
 evalQuadratic :: QuadPoly -> Double -> Double
 evalQuadratic (a2,a1,a0) t = t*(t*a2+a1)+a0
 
+-- | evaluates a cubic polynomial at a point 't'
 evalCubic :: CubPoly -> Double -> Double
 evalCubic (a3,a2,a1,a0) t = t*(t*(t*a3+a2)+a1)+a0
 
+-- | takes a cubic polynomial and produces it's derivative
+--   probably going to be renamed
 derivCoeffsCubic :: CubPoly -> QuadPoly
 derivCoeffsCubic (a3,a2,a1,_) = (3*a3,2*a2,a1)
 
+-- | takes a quadratic polynomial and produces it's derivative
+--   also probably going to be renamed
 derivCoeffsQuadratic :: QuadPoly -> LinPoly
 derivCoeffsQuadratic (a2,a1,_) = (2*a2,a1)
 
@@ -170,9 +181,13 @@ standardToBezierBasis3 :: CubPoly -> (Double,Double,Double,Double)
 standardToBezierBasis3 (b3,b2,b1,b0) = (b0,(b1/3)+b0,(b2/3)+((2/3)*b1)+b0,b3+b2+b1+b0)
 
 -- composeLinLin f g ~ f . g
+-- | composes a linear polynomial f with another linear polynomial g
+--   i.e. 'composeLinLin f g' is essentially 'f . g'
 composeLinLin :: LinPoly -> LinPoly -> LinPoly
 composeLinLin (a1,a0) (b1,b0) = (a1*b1,a1*b0+a0)
 
+-- | composes a quadratic polynomial f with a linear polynomial g
+--   i.e. 'composeQuadLin f g' is essentially 'f . g'
 composeQuadLin :: QuadPoly -> LinPoly -> QuadPoly
 composeQuadLin (a2,a1,a0) (b1,b0) =
   ( a2*b1^2
@@ -180,6 +195,8 @@ composeQuadLin (a2,a1,a0) (b1,b0) =
   , a2*b0^2+a1*b0+a0
   )
 
+-- | composes a cubic polynomial f with a linear polynomial g
+--   i.e. 'composeCubLin f g' is essentially 'f . g'
 composeCubLin :: CubPoly -> LinPoly -> CubPoly
 composeCubLin (a3,a2,a1,a0) (b1,b0) = 
   ( a3*b1^3
@@ -188,7 +205,11 @@ composeCubLin (a3,a2,a1,a0) (b1,b0) =
   , a3*b0^3+a2*b0^2+a1*b0+a0
   )
 
+-- | converts quadratic polynomial given in the standard basis, 't^2', 't', '1', to
+--   the bezier basis, '(t-1)^2', '2t(t-1)', 't^2'
 stdToBezBasis2 = standardToBezierBasis2
+-- | converts cubic polynomial given in the standard basis, 't^3', 't^2', 't', '1', to
+--   the bezier basis, '(t-1)^3', '3t(t-1)^2', '3t^2(t-1)', 't^3'
 stdToBezBasis3 = standardToBezierBasis3
 
 stIntToBezBasis2 :: (Double,Double,Double) -> (Double,Double,Double)
