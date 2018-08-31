@@ -3,18 +3,16 @@ Also going to start prioritizing (short term priorities) Also a lot of repeats h
 
 Urgent:
 High:
-1. Add conversion to/from the standard interpolation basis in Polynomial.hs
-   (DONE)
-2. Improve stroking, particularly where Tiller-Hanson breaks down.
+1. Improve stroking, particularly where Tiller-Hanson breaks down.
    Primarily near loops/self intersections of cubic beziers and degenerate (i.e. linear)
    quadratic/cubic beziers
-3. Deal with cusps properly. Probably subdivide, figure out how to get tangents and normals at cusps, and 
+2. Deal with cusps properly. Probably subdivide, figure out how to get tangents and normals at cusps, and 
    then cap the resulting join (if the tangents are antiparallel ofc). I suppose we could have a sharp point
    that isn't a cusp. (Do math xD)
    (More or less done,
    but frankly, this doesn't work very well for handling the related problem of near cusps)
-4. Improve Rasterization to only rasterize an object within its bounding box. 
-5. First draft documentation of code.
+3. Improve Rasterization to only rasterize an object within its bounding box. 
+4. First draft documentation of code.
    Progress
      Done:
        MathClasses,
