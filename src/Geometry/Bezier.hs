@@ -29,12 +29,13 @@ data Bezier2 = Bezier2
   }
   deriving (Read,Show,Eq,Ord)
 
--- p1 p2 p3 -> quadratic polynomial
-computeBez2Coeffs :: (Double,Double,Double) -> (Double,Double,Double)
-computeBez2Coeffs (s,c,e) = (e-2*c+s,-2*s+2*c,s)
+-- | Synonym for 'bezToStdBasis2'. /Deprecated./
+computeBez2Coeffs :: (Double,Double,Double) -> QuadPoly
+computeBez2Coeffs = bezToStdBasis2
 
-computeBez3Coeffs :: (Double,Double,Double,Double) -> (Double,Double,Double,Double)
-computeBez3Coeffs (s,c,d,e) = (-s+3*c-3*d+e,3*s-6*c+3*d,-3*s+3*c,s)
+-- | Synonym for 'bezToStdBasis3'. /Deprecated./
+computeBez3Coeffs :: (Double,Double,Double,Double) -> CubPoly
+computeBez3Coeffs = bezToStdBasis3
 
 -- | Produces a 'Bezier2' from coefficients for @x@ and @y@
 bezierFromCoeffs2 :: QuadPoly -> QuadPoly -> Bezier2

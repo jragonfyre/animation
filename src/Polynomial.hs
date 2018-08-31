@@ -207,6 +207,27 @@ composeCubLin (a3,a2,a1,a0) (b1,b0) =
   , a3*b0^3+a2*b0^2+a1*b0+a0
   )
 
+-- | Converts the @bez2@ basis to the @std2@ basis. Basis change matrix:
+--
+-- > bez2 -> std2
+-- > [ [  1, -2, 1]
+-- > , [ -2,  2, 0]
+-- > , [  1,  0, 0]
+-- > ]
+bezToStdBasis2 :: (Double,Double,Double) -> QuadPoly
+bezToStdBasis2 (s,c,e) = (e-2*c+s,-2*s+2*c,s)
+
+-- | Converts the @bez3@ basis to the @std3@ basis. Basis change matrix:
+--
+-- > bez3 -> std3
+-- > [ [ -1,  3, -3, 1 ]
+-- > , [  3, -6,  3, 0 ]
+-- > , [ -3,  3,  0, 0 ]
+-- > , [  1,  0,  0, 0 ]
+-- > ]
+bezToStdBasis3 :: (Double,Double,Double,Double) -> CubPoly
+bezToStdBasis3 (s,c,d,e) = (-s+3*c-3*d+e,3*s-6*c+3*d,-3*s+3*c,s)
+
 --   Converts quadratic polynomial given in the standard basis, 't^2', 't', '1', to
 --   the bezier basis, '(t-1)^2', '2t(t-1)', 't^2'
 -- | Converts the @std2@ basis to the @bez2@ basis. Basis change matrix:
