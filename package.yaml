@@ -38,6 +38,7 @@ dependencies:
 - bytestring
 - binary
 - FontyFruity
+- tasty
 
 default-extensions:
 - LambdaCase
