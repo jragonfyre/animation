@@ -48,3 +48,9 @@ indicate :: Bool -> Double
 indicate True = 1
 indicate False = 0
 
+monoidMaybe :: (Monoid m) => Maybe m -> m
+monoidMaybe Nothing = mempty
+monoidMaybe (Just m) = m
+
+
+

@@ -8,8 +8,8 @@
 module Geometry.Bezier where
 
 import Geometry.Types
---import Geometry.Curve.Types
---import Geometry.Region
+import Geometry.Curve.Types
+import Geometry.Region
 import Geometry.Affine
 
 import Control.Lens ((^.), from, (&), (.~), over, _1)
