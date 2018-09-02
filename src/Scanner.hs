@@ -21,7 +21,6 @@ import Control.Lens ((^.), each, (&), (%~))
 
 import Data.Maybe (mapMaybe)
 
-
 data Sign = Plus | Minus 
   deriving (Show, Read, Eq, Ord, Enum)
 
@@ -46,14 +45,6 @@ solveWPSeg tol (WPathEArc earc) = solveEArc tol earc
 solveWPSegNTF :: Double -> Double -> WholePathSegment -> [(Double,(Sign,Double))]
 solveWPSegNTF tol y seg = map (\(t,xv,s)->(xv,(s,abs ((pathNormal seg t)^.x)))) $ solveWPSeg tol seg y 
 
---solveCusp :: Double -> WholePathSegment -> [Double]
---solveCusp 
-
--- returns t-values of cusp(s) if there is one
---solveCusp2 :: Double -> Bezier2 -> [Double]
---solveCusp2 tol bez = 
-
--- maybe t, x, sign
 solveSegment :: Double -> Segment -> Double -> [(Double, Double, Sign)]
 solveSegment tol seg y = 
   let
@@ -77,16 +68,7 @@ solveBezier2 tol bez y =
   let
     (b2,b1,b0) = yCoeffs2 bez
     -- TODO fix the tolerance stuff
-    ts = 
-      if abs b2 < tol
-      then 
-        if abs b1 < tol
-        then 
-          []
-        else
-          [(y-b0)/b1]
-      else
-        solveQuadratic (b2,b1,b0-y)
+    ts = solveQuadraticTol tol (b2,b1,b0-y)
     (a2,a1,a0) = xCoeffs2 bez
     derivy t = 2*t*b2 + b1
     derivx t = 2*t*a2 + a1
@@ -127,18 +109,9 @@ solveRBezier2 tol rbez y =
     as = rxCoeffs2 rbez
     ds = ryCoeffs2 rbez
     cs = rzCoeffs2 rbez
-    (b2,b1,b0) = ds-.y*.cs
+    bs = ds-.y*.cs
     -- TODO fix the tolerance stuff
-    ts = 
-      if abs b2 < tol
-      then 
-        if abs b1 < tol
-        then 
-          []
-        else
-          [(-b0)/b1]
-      else
-        solveQuadratic (b2,b1,b0)
+    ts = solveQuadraticTol tol bs
     computexh = evalQuadratic as 
     computeyh = evalQuadratic ds
     computeyhp = evalLinear (derivCoeffsQuadratic ds)
@@ -187,20 +160,7 @@ solveBezier3 tol bez y =
   let
     (b3,b2,b1,b0) = yCoeffs3 bez
     (a3,a2,a1,a0) = xCoeffs3 bez
-    ts = 
-      if abs b3 < tol
-      then
-        if abs b2 < tol
-        then
-          if abs b1 < tol
-          then
-            []
-          else
-            [(y-b0)/b1]
-        else
-          solveQuadratic (b2,b1,b0-y)
-      else
-        solveCubic (b3,b2,b1,b0-y)
+    ts = solveCubicTol tol (b3,b2,b1,b0-y)
     derivy t = t*(3*t*b3+2*b2)+b1
     paramx t = t*(t*(t*a3+a2)+a1)+a0
     isValid t = 
@@ -222,21 +182,8 @@ solveRBezier3 tol rbez y =
     as = rxCoeffs3 rbez
     ds = ryCoeffs3 rbez
     cs = rzCoeffs3 rbez
-    (b3,b2,b1,b0) = ds -. y*.cs
-    ts = 
-      if abs b3 < tol
-      then
-        if abs b2 < tol
-        then
-          if abs b1 < tol
-          then
-            []
-          else
-            [(-b0)/b1]
-        else
-          solveQuadratic (b2,b1,b0)
-      else
-        solveCubic (b3,b2,b1,b0)
+    bs = ds -. y*.cs
+    ts = solveCubicTol tol bs
     computexh = evalCubic as 
     computeyh = evalCubic ds
     computeyhp = evalQuadratic (derivCoeffsCubic ds)

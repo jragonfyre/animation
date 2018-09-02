@@ -52,5 +52,26 @@ monoidMaybe :: (Monoid m) => Maybe m -> m
 monoidMaybe Nothing = mempty
 monoidMaybe (Just m) = m
 
+-- doesn't do boundary checks
+invertMonotoneIncreasing :: Double -> (Double, Double) -> (Double -> Double) -> Double -> Double
+invertMonotoneIncreasing tol (st,ed) f y = 
+  let 
+    mid = (ed+st)/2
+    val = f mid
+  in
+    if (ed - st) < tol
+    then
+      mid
+    else
+      invertMonotoneIncreasing
+        tol
+        ( if f mid < y
+          then
+            (mid,ed)
+          else
+            (st,mid)
+        )
+        f
+        y
 
 

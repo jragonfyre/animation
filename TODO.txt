@@ -34,17 +34,13 @@ High: (4 total)
        Geometry.Affine,
        Geometry.BSpline,
        Geometry.CommonPaths,
-       Geometry.Curve,
-       Geometry.Curve.Types,
        Geometry.Ellipse,
        Geometry.Parametrized,
        Geometry.Path,
        Geometry.PathBuilder,
        Geometry.PolyLine,
-       Geometry.Region,
-       Geometry.Region.Types,
        Geometry.Types,
-Medium: (7 total)
+Medium: (8 total)
 1. Refactor the Path/Contour/ClosedPath abstraction. 
    ClosedPath isn't a great abstraction. Also it would be great to provide a more unified interface to 
    Path/Contours. It's nice to have a type level distinction between the concepts, but they also behave very 
@@ -66,6 +62,8 @@ Medium: (7 total)
 6. Improve accuracy of bounding boxes computed for beziers/rational beziers
 7. Allow negative weights (as long as it doesn't produce a weight of 0 on the interval) for 
    rational beziers/nurbs, and allow computation of their bounding boxes 
+8. Add arc length/arc length parametrization of paths.
+   (to implement stuff like dashing strokes and drawing markers etc)
 Low: (10 total)
 1. Write functions to generate paths out of primitives.
    E.g. makeRoundRect Stuff -> Contour

@@ -9,12 +9,7 @@
 module Geometry 
   ( module Geometry
   , module Geometry.Types
-  --, module Geometry.Curve
-  --, module Geometry.Curve.Types
-  --, module Geometry.Region
-  --, module Geometry.Region.Types
   , module Geometry.Affine
-  , module Geometry.PolyLine
   , module Geometry.Bezier
   , module Geometry.Ellipse
   , module Geometry.Path
@@ -23,22 +18,13 @@ module Geometry
 --  , module Geometry.PathBuilder
   ) where
 
-import Data.Array 
-
 import Geometry.Types
-
---import Geometry.Curve
---import Geometry.Curve.Types
---import Geometry.Region
---import Geometry.Region.Types
 
 import Geometry.Path
 import Geometry.CommonPaths
 import Geometry.Parametrized
---import Geometry.PathBuilder
 
 import Geometry.Affine
-import Geometry.PolyLine
 
 import Geometry.Bezier
 import Geometry.Ellipse

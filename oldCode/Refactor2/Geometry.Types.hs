@@ -193,6 +193,41 @@ instance Each Segment Segment Point Point where
   -- Applicative f => (Double -> f Double) -> Point -> f Point
   each inj Segment{_segmentStart=s,_segmentEnd=e} = Segment <$> inj s <*> inj e
 
+-- open polygon
+{-
+newtype PolyLine = PolyLine (Array Integer Point)
+  deriving (Show, Read, Eq, Ord, Generic) 
+makePolyLine :: [Point] -> PolyLine
+makePolyLine ps = PolyLine $ listArray (0,fromIntegral $ length ps - 1) ps
+
+plFromArray :: (Array Integer Point) -> PolyLine
+plFromArray arr = PolyLine arr
+
+plToArray :: PolyLine -> Array Integer Point
+plToArray (PolyLine arr) = arr
+
+plToPoints :: PolyLine -> [Point]
+plToPoints (PolyLine arr) = elems arr
+
+plAsPoints :: Iso' PolyLine [Point]
+plAsPoints = iso plToPoints makePolyLine
+
+plAsArray :: Iso' PolyLine (Array Integer Point)
+plAsArray = iso plToArray plFromArray
+
+-- forall f. Applicative f => (Point -> f Point) -> PolyLine -> f PolyLine
+points :: Traversal' PolyLine Point
+points inj = fmap PolyLine . traverse inj . plToArray
+
+segments :: Fold PolyLine Segment
+segments = folding $ \pl -> 
+  let
+    pts = plToPoints pl
+  in
+    map (uncurry makeSegment) $ zip pts (tail pts)
+
+-}
+
 
 data Circle = Circle 
   { _circleCenter :: !Point
@@ -214,7 +249,6 @@ circFromPair = uncurry makeCircle
 circAsPair :: Iso' Circle (Point, Double)
 circAsPair = iso circToPair circFromPair
 
-{-
 data Conic = Conic
   { _conicCenter :: !Point
   , _conicMatrix :: !Matrix
@@ -235,6 +269,7 @@ conicFromPair = uncurry makeConic
 conicAsPair :: Iso' Conic (Point, Matrix)
 conicAsPair = iso conicToPair conicFromPair
 
+{-
 discriminant :: Conic -> Double 
 discriminant
 
@@ -278,6 +313,21 @@ convtopeAsHPlanes = iso convtopeToHPlanes makeConvexPolytope
 hplanes :: Traversal' ConvexPolytope HalfPlane
 hplanes inj = fmap makeConvexPolytope . traverse inj . convtopeToHPlanes
 
+-- closed polygon
+-- is a polyline whose first and last points are the same
+data Polygon = Polygon 
+  { _polygonBoundary :: !PolyLine 
+  , _polygonRegion :: !(Maybe ConvexPolytope)
+  }
+  deriving (Show, Read, Eq, Ord, Generic)
+
+makeFields ''Polygon
+
+makePolygon :: PolyLine -> Maybe ConvexPolytope -> Polygon
+makePolygon = Polygon
+
+--newtype ImplicitRegion = ImplicitRegion (Point -> Bool) 
+--deriving (Generic)
 
 type Parametrization = Double -> Point  -- parametrization domain is [0,1]
 type Implicitization = Point -> Double  

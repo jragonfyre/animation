@@ -619,6 +619,52 @@ reverseC Contour{contourSegs=cs} = Contour . V.reverse $ V.imap f cs
 
 --toWholeSegsOP :: Path -> Vector WholePathSegment
 
+{-
+-- | Considering using a class like this to unify interfaces and whatnot.
+class (Geometric a, GBounded a) => PathSegmentLike a where
+  parametrization :: s -> Double -> Point -- ^ The segment is the image of @[0,1]@ under 'parametrization'.
+  derivative :: s -> Double -> Vector -- ^ The derivative of 'parametrization'.
+  segmentLength :: s -> Double -- ^ Should return the arc length of the segment between 0 and 1.
+                               --   Perhaps approximated, might add a tolerance value to this.
+  reverseSegment :: s -> s -- ^ Reverses the segment.
+  splitAt :: s -> Double -> (s,s) -- ^ Takes parameter value, assumes it's strictly between 0 and 1.
+  segmentStart :: s -> Point -- ^ The start of the segment. Should satisfy:
+                             -- 
+                             -- prop> segmentStart seg == parametrization seg 0
+                             --
+                             --   Default implementation provided (using the property above),
+                             --   but should probably be implemented anyway.
+  segmentStart = flip parametrization 0 
+  segmentEnd :: s -> Point -- ^ The start of the segment. Should satisfy:
+                           -- 
+                           -- prop> segmentEnd seg == parametrization seg 1
+                           --
+                           --   Default implementation provided (using the property above),
+                           --   but should probably be implemented anyway.
+  segmentEnd = flip parametrization 1
+  stdToArcLength :: s -> Double -> Double -- ^ takes a parameter value and produces the arc length 
+                                          --   between 0 and that parameter value
+  arcLengthToStd :: s -> Double -> Double -- ^ inverse of 'stdToArcLength'.
+  --toPathSegment 
+
+instance PathSegmentLike Segment where
+  parametrization = segmentParametrization
+  derivative seg = (seg^.end)-.(seg^.start)
+  segmentLength seg = vectorNorm $ (seg^.end)-.(seg^.start) -- should maybe save this value?
+  reverseSegment seg = makeSegment (seg^.end) (seg^.start)
+  splitAt seg t =
+    let
+      p = parametrization seg t
+    in
+      (makeSegment (seg^.start) p, makeSegment p (seg^.end))
+  segmentStart = (^.start)
+  segmentEnd = (^.end)
+  stdToArcLength seg t = (segmentLength seg) * t
+  arcLengthToStd seg s = s / (segmentLength seg)
+-}
+
+--instance PathSegmentLike Bezier2 where
+
 class Pathable a where
   toPath :: a -> Path
   pathStart :: a -> Point

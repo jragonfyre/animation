@@ -23,22 +23,28 @@ dependencies:
 - base >= 4.7 && < 5
 - containers
 - mtl
-- array
+#- array
 - hip >= 1.5
 - JuicyPixels
 - colour
-- netpbm
+#- netpbm
 - vector
 - filepath
 - repa
 - data-default
 - lens
 - vector-algorithms
-- deepseq
-- bytestring
-- binary
+#- deepseq
+#- bytestring
+#- binary
 - FontyFruity
 - tasty
+- linear # for low dimensional linear algebra. For now only using it for 4D vectors, but if it is faster,
+         # will switch my 2D linear algebra over to this as well.
+- hmatrix-gsl # for integration, general polynomial root finding etc. 
+              # This will be super helpful, but use only when necessary. FFI calls apparently have a huge cost,
+              # which is why we're using linear over hmatrix for low dimensional linear algebra in the first
+              # place.
 
 default-extensions:
 - LambdaCase

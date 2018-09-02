@@ -170,8 +170,31 @@ instance Geometric HalfPlane where
     in
       makeHalfPlane tnorm trad
 
+instance Pointed PolyLine where
+  pointsOf = points
+instance Geometric PolyLine where
+  transform aff pl = pl & points %~ (transform aff)
+
 instance Geometric ConvexPolytope where
   transform aff cp = cp & hplanes %~ (transform aff)
+
+instance Geometric Polygon where
+  transform aff poly = 
+    let 
+      pl = poly^.boundary
+      cp = poly^.region
+    in
+      makePolygon (transform aff pl) (fmap (transform aff) cp)
+
+--infixl 7 *!
+--(*!) :: Matrix -> Vector -> Vector
+--(*!) mat vec = (vec ^. x) *. (mat ^. x) +. (vec ^. y) *. (mat ^. y)
+--(v1,v2) (x1,x2) = x1 *. v1 +. x2 *.v2
+
+--infixl 7 *!+
+--(*!+) :: Affine -> Point -> Point
+--(*!+) aff pt = 
+-- (m,t) p = m *! p +. t
 
 line :: Point -> Point -> Double -> Point
 line p1 p2 t = p1 +. t*.(p2-.p1)
@@ -342,6 +365,25 @@ insideConvtope conv pt = allOf hplanes (flip insideHalfPlane pt) conv
 avgPoints :: [Point] -> Point
 avgPoints ps = (1/fromIntegral (length ps) :: Double) *. foldr (+.) origin ps
 
+-- makePolygon vertices isConvex
+buildPolygon :: [Point] -> Bool -> Polygon
+buildPolygon ps isConvex = 
+  let
+    pl = makePolyLine (ps ++ [head ps])
+    center = avgPoints ps
+  in 
+    makePolygon pl $
+      if isConvex
+      then
+        Just 
+          . makeConvexPolytope
+          $ pl
+              ^.. segments
+              & each 
+              %~ (uncurry (buildHalfPlanePoint center) . segmentToLine)
+      else
+        Nothing
+
 makeBoxSides :: Double -> Double -> Double -> Double -> Box
 makeBoxSides lx mx ly my =
   let
@@ -372,6 +414,12 @@ convexBoundingBox pts =
     (ly,my) = minMaxOf $ map (^.y) pts
   in
     makeBoxSides lx mx ly my
+
+polyLineBoundingBox :: PolyLine -> Box
+polyLineBoundingBox = convexBoundingBox . (^..points)
+
+polygonBoundingBox :: Polygon -> Box
+polygonBoundingBox = convexBoundingBox . (^..boundary.points)
 
 segmentBoundingBox :: Segment -> Box
 segmentBoundingBox = convexBoundingBox . (^.. each)
@@ -412,6 +460,12 @@ instance GBounded Point where
 
 instance GBounded Segment where
   bounds = segmentBoundingBox
+
+instance GBounded Polygon where
+  bounds = polygonBoundingBox
+
+instance GBounded PolyLine where
+  bounds = polyLineBoundingBox
 
 instance GBounded Box where
   bounds = id

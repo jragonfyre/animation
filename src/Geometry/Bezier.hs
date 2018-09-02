@@ -29,6 +29,27 @@ data Bezier2 = Bezier2
   deriving (Read,Show,Eq,Ord)
 --  , implicitParams2 :: (Double,Double,Double,Double,Double,Double)
 
+-- THIS CAN BE COMPUTED EXACTLY :D
+-- | Compute the arc length for a Bezier2 exactly.
+arclengthBezier2 :: Bezier2 -> Double -> Double
+arclengthBezier2 bez t = arclengthHelperBezier2 bez t - arclengthHelperBezier2 bez 0
+
+arclengthHelperBezier2 :: Bezier2 -> Double -> Double
+arclengthHelperBezier2 bez t =
+  let
+    (d2,d1,_) = xCoeffs2 bez
+    (e2,e1,_) = yCoeffs2 bez
+    (a,b,c) = (4*(d2^2+e2^2),4*(d2*d1+e2*e1),d1^2+e1^2)
+    (bp,cp) = (b/a,c/a)
+    bp2 = bp/2
+    tpbp2 = t+bp2
+    spoly = sqrt (t^2 + bp*t+cp)
+    alpha = sqrt (cp-bp2^2)
+    rta2 = (sqrt a)/2
+  in
+    rta2 * (tpbp2*spoly+alpha^2*(log (abs ((spoly + tpbp2)/alpha))))
+
+
 -- | Synonym for 'bezToStdBasis2'. /Deprecated./
 computeBez2Coeffs :: (Double,Double,Double) -> QuadPoly
 computeBez2Coeffs = bezToStdBasis2
