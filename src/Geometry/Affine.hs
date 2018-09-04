@@ -18,6 +18,7 @@ import Control.Lens (over, (&), (^.), (%~), from, each, (^..), (*~), (+~), (-~),
 import Control.Lens.Traversal
 
 import Data.Maybe (mapMaybe)
+import Data.List (foldl')
 
 import Utils
 
@@ -143,7 +144,17 @@ instance Multiplicable Point Vector Double where
 instance Multiplicable Vector Vector Double where 
   (*.) v1 v2 = v1^.x*v2^.x+v1^.y*v2^.y
 
+instance Pointlike Vector where
 instance Polynomializable Vector Vector where
+
+instance Pointlike Point where
+  affineCombo pt (t,opt) = line pt opt t
+  affineComboGen pt ts = foldl' (+.) pt $ fmap (\(t,opt) -> t*. (opt -. pt)) ts
+  -- ^ this has a more efficient implementation, also might want to reconsider refactoring Polynomializable/
+  -- Pointlike, given that this implementation works for any 'Polynomializable'
+  -- hmmmmm
+  -- oh well, this works for now.
+
 instance Polynomializable Vector Point where
 
 instance Geometric Vector where

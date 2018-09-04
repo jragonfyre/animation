@@ -196,37 +196,37 @@ interpolation3 -> bez3
 
 -}
 -- | Synonym for 'stdToBezBasis2'. /Deprecated./
-standardToBezierBasis2 :: (Vectorlike a) => QuadraticPoly a a -> (a,a,a)
+standardToBezierBasis2 :: Polynomializable a b => QuadraticPoly a b -> (b,b,b)
 standardToBezierBasis2 = stdToBezBasis2
 
 
 -- | Synonym for 'stdToBezBasis3'. /Deprecated./
-standardToBezierBasis3 :: CubPoly -> (Double,Double,Double,Double)
-standardToBezierBasis3 (b3,b2,b1,b0) = (b0,(b1/3)+b0,(b2/3)+((2/3)*b1)+b0,b3+b2+b1+b0)
+standardToBezierBasis3 :: Polynomializable a b => CubicPoly a b -> (b,b,b,b)
+standardToBezierBasis3 = stdToBezBasis3
 
 -- composeLinLin f g ~ f . g
 -- | composes a linear polynomial f with another linear polynomial g
 --   i.e. 'composeLinLin f g' is essentially 'f . g'
-composeLinLin :: LinPoly -> LinPoly -> LinPoly
-composeLinLin (a1,a0) (b1,b0) = (a1*b1,a1*b0+a0)
+composeLinLin :: Polynomializable a b => LinearPoly a b -> LinPoly -> LinearPoly a b
+composeLinLin (a1,a0) (b1,b0) = (b1*.a1, b0*.a1 +. a0)
 
 -- | composes a quadratic polynomial f with a linear polynomial g
 --   i.e. 'composeQuadLin f g' is essentially 'f . g'
-composeQuadLin :: QuadPoly -> LinPoly -> QuadPoly
+composeQuadLin :: Polynomializable a b => QuadraticPoly a b -> LinPoly -> QuadraticPoly a b
 composeQuadLin (a2,a1,a0) (b1,b0) =
-  ( a2*b1^2
-  , 2*a2*b1*b0+a1*b1
-  , a2*b0^2+a1*b0+a0
+  ( (b1^2) *. a2
+  , (2*b1*b0) *. a2 +. b1 *. a1
+  , (b0^2) *. a2 +. b0*.a1 +. a0
   )
 
 -- | composes a cubic polynomial f with a linear polynomial g
 --   i.e. 'composeCubLin f g' is essentially 'f . g'
-composeCubLin :: CubPoly -> LinPoly -> CubPoly
+composeCubLin :: Polynomializable a b => CubicPoly a b -> LinPoly -> CubicPoly a b
 composeCubLin (a3,a2,a1,a0) (b1,b0) = 
-  ( a3*b1^3
-  , 3*a3*b1^2*b0+a2*b1^2
-  , 3*a3*b1*b0^2+2*a2*b1*b0+a1*b1
-  , a3*b0^3+a2*b0^2+a1*b0+a0
+  ( (b1^3) *. a3
+  , (3*b1^2*b0) *. a3 +. (b1^2) *. a2
+  , (3*b1*b0^2) *. a3 +. (2*b1*b0) *. a2 +. b1*.a1
+  , (b0^3) *. a3 +. (b0^2) *. a2 +. b0 *. a1 +. a0
   )
 
 -- | Converts the @bez2@ basis to the @std2@ basis. Basis change matrix:
@@ -236,8 +236,13 @@ composeCubLin (a3,a2,a1,a0) (b1,b0) =
 -- > , [ -2,  2, 0]
 -- > , [  1,  0, 0]
 -- > ]
-bezToStdBasis2 :: (Double,Double,Double) -> QuadPoly
-bezToStdBasis2 (s,c,e) = (e-2*c+s,-2*s+2*c,s)
+bezToStdBasis2 :: Polynomializable a b => (b,b,b) -> QuadraticPoly a b
+bezToStdBasis2 (s,c,e) = 
+  ( (e -. c) +. (s -. c)
+  --( e +. (-2::Double)*.c +. s
+  , (2::Double) *. (c-.s)
+  , s
+  )
 
 -- | Converts the @bez3@ basis to the @std3@ basis. Basis change matrix:
 --
@@ -247,10 +252,11 @@ bezToStdBasis2 (s,c,e) = (e-2*c+s,-2*s+2*c,s)
 -- > , [ -3,  3,  0, 0 ]
 -- > , [  1,  0,  0, 0 ]
 -- > ]
-bezToStdBasis3 :: Vectorlike a => (a,a,a,a) -> CubicPoly a a
+bezToStdBasis3 :: Polynomializable a b => (b,b,b,b) -> CubicPoly a b
 bezToStdBasis3 (s,c,d,e) = 
   ( (3::Double) *. (c -. d) +. (e -. s)
-  , (3::Double) *. (s +. (-2::Double)*.c+.d)
+  --, (3::Double) *. (s +. (-2::Double)*.c+.d)
+  , (3::Double) *. ((s -. c) +. (d -. c))
   , (3::Double) *. (c -. s)
   , s
   )
@@ -264,8 +270,12 @@ bezToStdBasis3 (s,c,d,e) =
 -- > , [ 0, 1/2, 1 ]
 -- > , [ 1,   1, 1 ]
 -- > ]
-stdToBezBasis2 :: Vectorlike a => QuadraticPoly a a -> (a,a,a)
-stdToBezBasis2 (b2,b1,b0) = (b0,(1/2::Double)*.b1+.b0,b2+.b1+.b0)
+stdToBezBasis2 :: Polynomializable a b => QuadraticPoly a b -> (b,b,b)
+stdToBezBasis2 (b2,b1,b0) = 
+  ( b0
+  , (1/2::Double)*.b1 +. b0
+  , b2 +. b1 +. b0
+  )
 
 
 --   Converts cubic polynomial given in the standard basis, 't^3', 't^2', 't', '1', to
@@ -278,7 +288,13 @@ stdToBezBasis2 (b2,b1,b0) = (b0,(1/2::Double)*.b1+.b0,b2+.b1+.b0)
 -- > , [ 0, 1/3, 2/3, 1]
 -- > , [ 1,   1,   1, 1]
 -- > ]
-stdToBezBasis3 = standardToBezierBasis3
+stdToBezBasis3 :: Polynomializable a b => CubicPoly a b -> (b,b,b,b)
+stdToBezBasis3 (b3,b2,b1,b0) = 
+  ( b0
+  , (1/3::Double)*.b1 +. b0
+  , (1/3::Double)*.b2 +. (2/3::Double)*.b1 +. b0
+  , b3 +. b2 +. b1 +. b0
+  )
 
 -- | Converts the @stInt2@ basis to the @bez2@ basis. Basis change matrix:
 --
@@ -287,8 +303,14 @@ stdToBezBasis3 = standardToBezierBasis3
 -- > , [ -1/2,    2, -1/2 ]
 -- > , [    0,    0,    1 ]
 -- > ]
-stIntToBezBasis2 :: (Double,Double,Double) -> (Double,Double,Double)
-stIntToBezBasis2 (p0,p1,p2) = (p0,2*p1 - (p0+p2)/2,p2)
+stIntToBezBasis2 :: Pointlike b => (b,b,b) -> (b,b,b)
+stIntToBezBasis2 (p0,p1,p2) = 
+  ( p0
+  , affineComboGen p1 [(-1/2,p0),(-1/2,p2)]
+  -- (1/2::Double)*.((p1-.p0) +. (p1-.p2)) +. p1
+  --, (2::Double) *. p1 +. (-1/2::Double)*.(p0+.p2)
+  , p2
+  )
 
 -- | Converts the @stInt3@ basis to the @bez3@ basis. Basis change matrix:
 --
@@ -298,8 +320,15 @@ stIntToBezBasis2 (p0,p1,p2) = (p0,2*p1 - (p0+p2)/2,p2)
 -- > , [  1/3, -3/2,    3, -5/6 ]
 -- > , [    0,    0,    0,    1 ]
 -- > ]
-stIntToBezBasis3 :: (Double,Double,Double,Double) -> (Double,Double,Double,Double)
-stIntToBezBasis3 (p0,p1,p2,p3) = (p0,-5/6*p0+3*p1-3/2*p2+p3/3,p0/3-3/2*p1+3*p2-5/6*p3,p3)
+stIntToBezBasis3 :: Pointlike b => (b,b,b,b) -> (b,b,b,b)
+stIntToBezBasis3 (p0,p1,p2,p3) = 
+  ( p0
+  , affineComboGen p1 [(-5/6,p0), (-3/2,p2), (1/3,p3)]
+  --, (-5/6::Double)*.p0 +. (3::Double)*.p1 +. (-3/2::Double)*.p2 +. (1/3::Double)*.p3
+  , affineComboGen p2 [(-5/6,p3), (-3/2,p1), (1/3,p0)]
+  --, (1/3::Double)*.p0 +. (-3/2::Double)*.p1 +. (3::Double)*.p2 +. (-5/6::Double)*.p3
+  , p3
+  )
 
 -- | Converts the @stInt2@ basis to the @std2@ basis. Basis change matrix:
 --
@@ -308,10 +337,12 @@ stIntToBezBasis3 (p0,p1,p2,p3) = (p0,-5/6*p0+3*p1-3/2*p2+p3/3,p0/3-3/2*p1+3*p2-5
 -- > , [ -3,  4, -1 ]
 -- > , [  1,  0,  0 ]
 -- > ]
-stIntToStdBasis2 :: (Double,Double,Double) -> (Double,Double,Double)
+stIntToStdBasis2 :: Polynomializable a b => (b,b,b) -> QuadraticPoly a b
 stIntToStdBasis2 (p0,p1,p2) = 
-  ( 2*p0 - 4*p1 + 2*p2
-  , -3*p0 + 4*p1 - p2
+  ( (2::Double)*.((p0-.p1) +. (p2-.p1))
+  --( 2*p0 - 4*p1 + 2*p2
+  , (3::Double)*.(p1-.p0) +. (p1-.p2)
+  --, -3*p0 + 4*p1 - p2
   , p0
   )
 
@@ -323,11 +354,17 @@ stIntToStdBasis2 (p0,p1,p2) =
 -- > , [ -11/2,     9,  -9/2,    1 ]
 -- > , [     1,     0,     0,    0 ]
 -- > ]
-stIntToStdBasis3 :: (Double,Double,Double,Double) -> (Double,Double,Double,Double)
+stIntToStdBasis3 :: Polynomializable a b => (b,b,b,b) -> CubicPoly a b
 stIntToStdBasis3 (p0,p1,p2,p3) =
-  ( (-9/2)*p0 + (27/2)*p1 + (-27/2)*p2 + (9/2)*p3
-  , 9*p0 + (-45/2)*p1 + 18*p2 + (-9/2)*p3
-  , (-11/2)*p0 + 9*p1 + (-9/2)*p2 + p3
+  ( (9/2::Double)*.(p3-.p0) +. (27/2::Double)*.(p1-.p2)
+  --( (-9/2::Double)*.p0 +. (27/2::Double)*.p1 +. (-27/2::Double)*.p2 +. (9/2::Double)*.p3
+  --( (-9/2)*p0 + (27/2)*p1 + (-27/2)*p2 + (9/2)*p3
+  , (affineComboGen p0 [ (-45/2,p1), (18,p2), (-9/2,p3) ]) -. p0
+  --, (9::Double)*.p0 +. (-45/2::Double)*.p1 +. (18::Double)*.p2 +. (-9/2::Double)*.p3
+  --, 9*p0 + (-45/2)*p1 + 18*p2 + (-9/2)*p3
+  , (affineComboGen p0 [ (9,p1), (-9/2,p2), (1,p3) ]) -. p0
+  --, (-11/2::Double)*.p0 +. (9::Double)*.p1 +. (-9/2::Double)*.p2 +. p3
+  --, (-11/2)*p0 + 9*p1 + (-9/2)*p2 + p3
   , p0
   )
 
@@ -338,11 +375,11 @@ stIntToStdBasis3 (p0,p1,p2,p3) =
 -- > , [ 1/4, 1/2, 1 ]
 -- > , [   1,   1, 1 ]
 -- > ]
-stdToStIntBasis2 :: QuadPoly -> (Double,Double,Double)
+stdToStIntBasis2 :: Polynomializable a b => QuadraticPoly a b -> (b,b,b)
 stdToStIntBasis2 (a2,a1,a0) = 
   ( a0
-  , (1/4)*a2 + (1/2)*a1 + a0
-  , a2 + a1 + a0
+  , (1/4::Double)*.a2 +. (1/2::Double)*.a1 +. a0
+  , a2 +. a1 +. a0
   )
 
 -- | Converts the @bez2@ basis to the @stInt2@ basis. Basis change matrix:
@@ -352,10 +389,11 @@ stdToStIntBasis2 (a2,a1,a0) =
 -- > , [ 1/4, 1/2, 1/4 ]
 -- > , [   0,   0,   1 ]
 -- > ]
-bezToStIntBasis2 :: (Double,Double,Double) -> (Double,Double,Double)
+bezToStIntBasis2 :: Pointlike b => (b,b,b) -> (b,b,b)
 bezToStIntBasis2 (s,c,e) = 
   ( s
-  , (1/4)*s + (1/2)*c + (1/4)*e
+  , affineComboGen c [(1/4,s), (1/4,e)]
+  --, (1/4::Double)*.s +. (1/2::Double)*.c +. (1/4::Double)*.e
   , e
   )
 
@@ -367,12 +405,12 @@ bezToStIntBasis2 (s,c,e) =
 -- > , [ 8/27, 4/9, 2/3, 1 ]
 -- > , [    1,   1,   1, 1 ]
 -- > ]
-stdToStIntBasis3 :: CubPoly -> (Double,Double,Double,Double)
+stdToStIntBasis3 :: Polynomializable a b => CubicPoly a b -> (b,b,b,b)
 stdToStIntBasis3 (a3,a2,a1,a0) = 
   ( a0
-  , (1/27)*a3 + (1/9)*a2 + (1/3)*a1 + a0
-  , (8/27)*a3 + (4/9)*a2 + (2/3)*a1 + a0
-  , a3 + a2 + a1 + a0
+  , (1/27::Double)*.a3 +. (1/9::Double)*.a2 +. (1/3::Double)*.a1 +. a0
+  , (8/27::Double)*.a3 +. (4/9::Double)*.a2 +. (2/3::Double)*.a1 +. a0
+  , a3 +. a2 +. a1 +. a0
   )
 
 -- | Converts the @bez3@ basis to the @stInt3@ basis. Basis change matrix:
@@ -383,11 +421,13 @@ stdToStIntBasis3 (a3,a2,a1,a0) =
 -- > , [ 1/27, 2/9, 4/9, 8/27 ]
 -- > , [    0,   0,   0,    1 ]
 -- > ]
-bezToStIntBasis3 :: (Double,Double,Double,Double) -> (Double,Double,Double,Double)
+bezToStIntBasis3 :: Pointlike b => (b,b,b,b) -> (b,b,b,b)
 bezToStIntBasis3 (s,c,d,e) =
   ( s
-  , (8/27)*s + (4/9)*c + (2/9)*d + (1/27)*e
-  , (1/27)*s + (2/9)*c + (4/9)*d + (8/27)*e
+  , affineComboGen s [ (4/9,c), (2/9,d), (1/27,e) ]
+  --, (8/27::Double)*.s +. (4/9::Double)*.c +. (2/9::Double)*.d +. (1/27::Double)*.e
+  , affineComboGen s [ (2/9,c), (4/9,d), (8/27,e) ]
+  --, (1/27::Double)*.s +. (2/9::Double)*.c +. (4/9::Double)*.d +. (8/27::Double)*.e
   , e
   )
 

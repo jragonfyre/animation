@@ -85,6 +85,29 @@ class Unitable a where
   default unit :: (Num a) => a
   unit = 1
 
+-- | Class to represent an affine point.
+class Pointlike a where
+  -- | 'affineCombo' should represent something like 
+  --
+  -- > affineCombo s (t,e) = (1-t)*s+t*e
+  --
+  -- Default definition provided for instances of 'Vectorlike'.
+  affineCombo :: a -> (Double,a) -> a
+  default affineCombo :: Vectorlike a => a -> (Double,a) -> a
+  affineCombo v1 (t,v2) = (1-t)*.v1 +. t*.v2
+  -- | Generalized affine combination. Default instance provided for instances of 'Vectorlike'.
+  --   I feel like there should be a less efficient implementation
+  --   in terms of folding 'affineCombo',
+  --   but I can't quite work it out, particularly since it seems like it would be numerically unstable.
+  affineComboGen :: a -> [(Double,a)] -> a
+  default affineComboGen :: Vectorlike a => a -> [(Double,a)] -> a
+  affineComboGen pt [] = pt
+  affineComboGen pt ((t1,pt1):pts) = affineComboGenH pt t1 (t1*.pt1) pts
+    where
+      affineComboGenH pt tot opt [] = (1-tot)*.pt +. opt
+      affineComboGenH pt tot opt ((t1,pt1):mpts) = affineComboGenH pt (tot+t1) (opt +. t1*.pt1) mpts
+
+
 -- | class synonym 'AbGroup' to denote an abelian group type
 class (Summable a a a, Zeroable a, Negatable a, Subtractable a a a) => AbGroup a where
 instance (Summable a a a, Zeroable a, Negatable a, Subtractable a a a) => AbGroup a where
@@ -94,8 +117,9 @@ class (Multiplicable Double a a, AbGroup a) => Vectorlike a where
 instance (Multiplicable Double a a, AbGroup a) => Vectorlike a where
 
 -- | class synonym to denote types that will behave ok in a Polynomial situation
-class (Vectorlike a, Summable a b b) => Polynomializable a b | b -> a where
+class (Vectorlike a, Summable a b b, Subtractable b b a, Pointlike b) => Polynomializable a b | b -> a where
 
+instance Pointlike Double where
 instance Polynomializable Double Double where
 
 instance Summable Double Double Double where 
