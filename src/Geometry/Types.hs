@@ -9,7 +9,6 @@ module Geometry.Types where
   --( 
   --) where
 
---import Data.Array (Array)
 import GHC.Generics (Generic)
 
 -- Lens imports
@@ -19,11 +18,7 @@ import Control.Lens.Each
 import Control.Lens.Fold (folding)
 import Control.Lens.Iso (iso)
 
---import Data.Array (elems, listArray)
 
-
--- point
---type Point = (Double, Double)
 
 --Lens version of Point
 data Point = Point 

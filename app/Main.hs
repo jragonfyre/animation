@@ -261,12 +261,67 @@ plotPicture fgr fax sw pp pstep =
     str = strokeTestS{strokeDistance=sw/2}
     pth = buildParametrizedPath pp pstep
     bbox = bounds pth
-    xax = makePath [PathSeg $ makePoint (boxLeft bbox) 0] (makePoint (boxRight bbox) 0)
-    yax = makePath [PathSeg $ makePoint 0 (boxBottom bbox)] (makePoint 0 (boxTop bbox))
+    --xax = makePath [PathSeg $ makePoint (boxLeft bbox) 0] (makePoint (boxRight bbox) 0)
+    --yax = makePath [PathSeg $ makePoint 0 (boxBottom bbox)] (makePoint 0 (boxTop bbox))
   in
     [ fill fgr $ stroke str pth
-    , fill fax $ stroke str [xax,yax]
+    --, fill fax $ stroke str [xax,yax]
+    , drawAxes fax (sw/2) (sw/4) (sw/10) 0.1 bbox
     ]
+
+plotPictures :: (Filling a) => a -> Double -> [(a,ParamPath0,Double)] -> Picture
+plotPictures fax sw l = 
+  let
+    str = strokeTestS{strokeDistance=sw/2}
+    pths = fmap (\(fil,pp,pstep) -> (fil,buildParametrizedPath pp pstep)) l
+    bbox = unionBoxes $ fmap (bounds . snd) pths
+  in
+    (fmap (\(fil,pth) -> fill fil $ stroke str pth) pths)
+    ++
+    [ drawAxes fax (sw/2) (sw/4) (sw/10) 0.1 bbox
+    ]
+    
+
+drawAxes :: (Filling a) => a -> Double -> Double -> Double -> Double -> Box -> SimplePicture
+drawAxes fax axMainW axMajW axMinW axMinSep box = 
+  let
+    strMn = strokeTestS{strokeDistance=axMainW}
+    strMa = strokeTestS{strokeDistance=axMajW}
+    strMi = strokeTestS{strokeDistance=axMinW}
+    bl = boxLeft box
+    br = boxRight box
+    bt = boxTop box
+    bb = boxBottom box
+    str axNum = 
+      ( if axNum == 0
+        then strMn
+        else
+          if (axNum `mod` 5) == 0
+          then strMa
+          else strMi
+      )
+    horiz axNum =
+      stroke 
+        (str axNum)
+        ( let 
+            yv = fromIntegral axNum*axMinSep
+          in
+            makePath [ PathSeg $ makePoint bl yv ] (makePoint br yv)
+        )
+    vert axNum =
+      stroke
+        (str axNum)
+        ( let 
+            xv = fromIntegral axNum*axMinSep
+          in
+            makePath [ PathSeg $ makePoint xv bb ] (makePoint xv bt)
+        )
+  in
+    fill fax . concat
+      $
+        (map vert [(ceiling (bl/axMinSep))..(floor (br/axMinSep))])
+        ++
+        (map horiz [(ceiling (bb/axMinSep))..(floor (bt/axMinSep))])
 
 -- assumes rext > rint > rpen
 spiroBoundingBox :: (Double, Double, Double) -> Box

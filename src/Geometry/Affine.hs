@@ -143,6 +143,9 @@ instance Multiplicable Point Vector Double where
 instance Multiplicable Vector Vector Double where 
   (*.) v1 v2 = v1^.x*v2^.x+v1^.y*v2^.y
 
+instance Polynomializable Vector Vector where
+instance Polynomializable Vector Point where
+
 instance Geometric Vector where
   transform = (*.)
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE UndecidableInstances #-}
 --
 -- MathClasses.hs
 -- Copyright (C) 2018 jragonfyre <jragonfyre@jragonfyre>
@@ -83,6 +84,19 @@ class Unitable a where
   -- | default implementation
   default unit :: (Num a) => a
   unit = 1
+
+-- | class synonym 'AbGroup' to denote an abelian group type
+class (Summable a a a, Zeroable a, Negatable a, Subtractable a a a) => AbGroup a where
+instance (Summable a a a, Zeroable a, Negatable a, Subtractable a a a) => AbGroup a where
+
+-- | class synonym 'Vector' to denote a vector type
+class (Multiplicable Double a a, AbGroup a) => Vectorlike a where
+instance (Multiplicable Double a a, AbGroup a) => Vectorlike a where
+
+-- | class synonym to denote types that will behave ok in a Polynomial situation
+class (Vectorlike a, Summable a b b) => Polynomializable a b | b -> a where
+
+instance Polynomializable Double Double where
 
 instance Summable Double Double Double where 
   (+.) = (+)

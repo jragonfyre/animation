@@ -1,3 +1,4 @@
+{-# LANGUAGE UndecidableInstances #-}
 --
 -- Polynomial.hs
 -- Copyright (C) 2018 jragonfyre <jragonfyre@jragonfyre>
@@ -12,72 +13,93 @@ module Polynomial
 import MathClasses
 
 -- | Type synonym for a constant polynomial
-type CPoly = Double
+type CPoly = ConstantPoly Double Double
+-- | Type synonym for a constant polynomial generalized
+type ConstantPoly a b = b
 -- | Type synonym for a linear polynomial
-type LinPoly = (Double,Double)
+type LinPoly = LinearPoly Double Double
+-- | Type synonym for a linear polynomial generalized
+type LinearPoly a b = (a,b)
 -- | Type synonym for a quadratic polynomial
-type QuadPoly = (Double,Double,Double)
+type QuadPoly = QuadraticPoly Double Double
+-- | Type synonym for a quadratic polynomial generalized
+type QuadraticPoly a b = (a,a,b)
 -- | Type synonym for a cubic polynomial
-type CubPoly = (Double,Double,Double,Double)
+type CubPoly = CubicPoly Double Double
+-- | Type synonym for a cubic polynomial generalized
+type CubicPoly a b = (a,a,a,b)
 
-instance Summable LinPoly LinPoly LinPoly where
-  (+.) (a1,a0) (b1,b0) = (a1+b1,a0+b0)
-instance Subtractable LinPoly LinPoly LinPoly where
-  (-.) (a1,a0) (b1,b0) = (a1-b1,a0-b0)
-instance Multiplicable Double LinPoly LinPoly where
-  (*.) x (a1,a0) = (x*a1,x*a0)
-instance Negatable LinPoly where
-  negify (a1,a0) = (-a1,-a0)
-instance Zeroable LinPoly where
-  zero = (0,0)
-instance Unitable LinPoly where
-  unit = (0,1)
-instance Summable QuadPoly QuadPoly QuadPoly where
-  (+.) (a2,a1,a0) (b2,b1,b0) = (a2+b2,a1+b1,a0+b0)
-instance Subtractable QuadPoly QuadPoly QuadPoly where
-  (-.) (a2,a1,a0) (b2,b1,b0) = (a2-b2,a1-b1,a0-b0)
-instance Multiplicable Double QuadPoly QuadPoly where
-  (*.) x (a2,a1,a0) = (x*a2,x*a1,x*a0)
-instance Negatable QuadPoly where
-  negify (a2,a1,a0) = (-a2,-a1,-a0)
-instance Zeroable QuadPoly where
-  zero = (0,0,0)
-instance Unitable QuadPoly where
-  unit = (0,0,1)
-instance Summable CubPoly CubPoly CubPoly where
-  (+.) (a3,a2,a1,a0) (b3,b2,b1,b0) = (a3+b3,a2+b2,a1+b1,a0+b0)
-instance Subtractable CubPoly CubPoly CubPoly where
-  (-.) (a3,a2,a1,a0) (b3,b2,b1,b0) = (a3-b3,a2-b2,a1-b1,a0-b0)
-instance Multiplicable Double CubPoly CubPoly where
-  (*.) x (a3,a2,a1,a0) = (x*a3,x*a2,x*a1,x*a0)
-instance Negatable CubPoly where
-  negify (a3,a2,a1,a0) = (-a3,-a2,-a1,-a0)
-instance Zeroable CubPoly where
-  zero = (0,0,0,0)
-instance Unitable CubPoly where
-  unit = (0,0,0,1)
+instance (Summable a c e, Summable b d f) => Summable (LinearPoly a b) (LinearPoly c d) (LinearPoly e f) where
+  (+.) (a1,a0) (b1,b0) = (a1+.b1,a0+.b0)
+instance (Subtractable a c e, Subtractable b d f) =>
+    Subtractable (LinearPoly a b) (LinearPoly c d) (LinearPoly e f) where
+  (-.) (a1,a0) (b1,b0) = (a1-.b1,a0-.b0)
+instance (Multiplicable Double a a, Multiplicable Double b b) => 
+    Multiplicable Double (LinearPoly a b) (LinearPoly a b) where
+  (*.) x (a1,a0) = (x*.a1,x*.a0)
+instance (Negatable a, Negatable b) => Negatable (LinearPoly a b) where
+  negify (a1,a0) = (negify a1,negify a0)
+instance (Zeroable a, Zeroable b) => Zeroable (LinearPoly a b) where
+  zero = (zero,zero)
+instance (Zeroable a, Unitable b) => Unitable (LinearPoly a b) where
+  unit = (zero,unit)
+instance (Summable a c e, Summable b d f) => 
+    Summable (QuadraticPoly a b) (QuadraticPoly c d) (QuadraticPoly e f) where
+  (+.) (a2,a1,a0) (b2,b1,b0) = (a2+.b2,a1+.b1,a0+.b0)
+instance (Subtractable a c e, Subtractable b d f) =>
+    Subtractable (QuadraticPoly a b) (QuadraticPoly c d) (QuadraticPoly e f) where
+  (-.) (a2,a1,a0) (b2,b1,b0) = (a2-.b2,a1-.b1,a0-.b0)
+instance (Multiplicable Double a a, Multiplicable Double b b) => 
+    Multiplicable Double (QuadraticPoly a b) (QuadraticPoly a b) where
+  (*.) x (a2,a1,a0) = (x*.a2,x*.a1,x*.a0)
+instance (Negatable a, Negatable b) => Negatable (QuadraticPoly a b) where
+  negify (a2,a1,a0) = (negify a2,negify a1,negify a0)
+instance (Zeroable a, Zeroable b) => Zeroable (QuadraticPoly a b) where
+  zero = (zero,zero,zero)
+instance (Zeroable a, Unitable b) => Unitable (QuadraticPoly a b) where
+  unit = (zero,zero,unit)
+instance (Summable a c e, Summable b d f) => 
+    Summable (CubicPoly a b) (CubicPoly c d) (CubicPoly e f) where
+  (+.) (a3,a2,a1,a0) (b3,b2,b1,b0) = (a3+.b3,a2+.b2,a1+.b1,a0+.b0)
+instance (Subtractable a c e, Subtractable b d f) =>
+    Subtractable (CubicPoly a b) (CubicPoly c d) (CubicPoly e f) where
+  (-.) (a3,a2,a1,a0) (b3,b2,b1,b0) = (a3-.b3,a2-.b2,a1-.b1,a0-.b0)
+instance (Multiplicable Double a a, Multiplicable Double b b) => 
+    Multiplicable Double (CubicPoly a b) (CubicPoly a b) where
+  (*.) x (a3,a2,a1,a0) = (x*.a3,x*.a2,x*.a1,x*.a0)
+instance (Negatable a, Negatable b) => Negatable (CubicPoly a b) where
+  negify (a3,a2,a1,a0) = (negify a3,negify a2,negify a1,negify a0)
+instance (Zeroable a, Zeroable b) => Zeroable (CubicPoly a b) where
+  zero = (zero,zero,zero,zero)
+instance (Zeroable a, Unitable b) => Unitable (CubicPoly a b) where
+  unit = (zero,zero,zero,unit)
 
 -- | evaluates a linear polynomial at a point 't'
-evalLinear :: LinPoly -> Double -> Double
-evalLinear (a1,a0) t = t*a1+a0
+evalLinear :: (Polynomializable a b) => LinearPoly a b -> Double -> b
+evalLinear (a1,a0) t = t*.a1+.a0
 
 -- | evaluates a quadratic polynomial at a point 't'
-evalQuadratic :: QuadPoly -> Double -> Double
-evalQuadratic (a2,a1,a0) t = t*(t*a2+a1)+a0
+evalQuadratic :: Polynomializable a b => QuadraticPoly a b -> Double -> b
+evalQuadratic (a2,a1,a0) t = t*.(t*.a2+.a1)+.a0
 
 -- | evaluates a cubic polynomial at a point 't'
-evalCubic :: CubPoly -> Double -> Double
-evalCubic (a3,a2,a1,a0) t = t*(t*(t*a3+a2)+a1)+a0
+evalCubic :: (Polynomializable a b) => CubicPoly a b -> Double -> b
+evalCubic (a3,a2,a1,a0) t = t*.(t*.(t*.a3+.a2)+.a1)+.a0
 
--- | takes a cubic polynomial and produces it's derivative
---   probably going to be renamed
-derivCoeffsCubic :: CubPoly -> QuadPoly
-derivCoeffsCubic (a3,a2,a1,_) = (3*a3,2*a2,a1)
+-- | Synonym for 'differentiateCubic'. /Deprecated./
+derivCoeffsCubic :: (Polynomializable a b, Polynomializable a a) => CubicPoly a b -> QuadraticPoly a a
+derivCoeffsCubic = differentiateCubic
+-- | Synonym for 'differentiateQuadratic'. /Deprecated./
+derivCoeffsQuadratic :: (Polynomializable a b, Polynomializable a a) => QuadraticPoly a b -> LinearPoly a a
+derivCoeffsQuadratic = differentiateQuadratic
+
+-- | Takes a cubic polynomial and produces it's derivative
+differentiateCubic :: (Polynomializable a b, Polynomializable a a) => CubicPoly a b -> QuadraticPoly a a
+differentiateCubic (a3,a2,a1,_) = ((3::Double)*.a3,(2::Double)*.a2,a1)
 
 -- | takes a quadratic polynomial and produces it's derivative
---   also probably going to be renamed
-derivCoeffsQuadratic :: QuadPoly -> LinPoly
-derivCoeffsQuadratic (a2,a1,_) = (2*a2,a1)
+differentiateQuadratic :: (Polynomializable a b, Polynomializable a a) => QuadraticPoly a b -> LinearPoly a a
+differentiateQuadratic (a2,a1,_) = ((2::Double)*.a2,a1)
 
 -- a cubic polynomial can be specified in several ways (i.e., wrt several bases, and here they are:)
 -- t^3,t^2,t,1 -- the basis used for the functions above
@@ -173,10 +195,10 @@ interpolation3 -> bez3
 
 
 -}
-
 -- | Synonym for 'stdToBezBasis2'. /Deprecated./
-standardToBezierBasis2 :: QuadPoly -> (Double,Double,Double)
-standardToBezierBasis2 (b2,b1,b0) = (b0,(b1/2)+b0,b2+b1+b0)
+standardToBezierBasis2 :: (Vectorlike a) => QuadraticPoly a a -> (a,a,a)
+standardToBezierBasis2 = stdToBezBasis2
+
 
 -- | Synonym for 'stdToBezBasis3'. /Deprecated./
 standardToBezierBasis3 :: CubPoly -> (Double,Double,Double,Double)
@@ -225,8 +247,13 @@ bezToStdBasis2 (s,c,e) = (e-2*c+s,-2*s+2*c,s)
 -- > , [ -3,  3,  0, 0 ]
 -- > , [  1,  0,  0, 0 ]
 -- > ]
-bezToStdBasis3 :: (Double,Double,Double,Double) -> CubPoly
-bezToStdBasis3 (s,c,d,e) = (-s+3*c-3*d+e,3*s-6*c+3*d,-3*s+3*c,s)
+bezToStdBasis3 :: Vectorlike a => (a,a,a,a) -> CubicPoly a a
+bezToStdBasis3 (s,c,d,e) = 
+  ( (3::Double) *. (c -. d) +. (e -. s)
+  , (3::Double) *. (s +. (-2::Double)*.c+.d)
+  , (3::Double) *. (c -. s)
+  , s
+  )
 
 --   Converts quadratic polynomial given in the standard basis, 't^2', 't', '1', to
 --   the bezier basis, '(t-1)^2', '2t(t-1)', 't^2'
@@ -237,7 +264,8 @@ bezToStdBasis3 (s,c,d,e) = (-s+3*c-3*d+e,3*s-6*c+3*d,-3*s+3*c,s)
 -- > , [ 0, 1/2, 1 ]
 -- > , [ 1,   1, 1 ]
 -- > ]
-stdToBezBasis2 = standardToBezierBasis2
+stdToBezBasis2 :: Vectorlike a => QuadraticPoly a a -> (a,a,a)
+stdToBezBasis2 (b2,b1,b0) = (b0,(1/2::Double)*.b1+.b0,b2+.b1+.b0)
 
 
 --   Converts cubic polynomial given in the standard basis, 't^3', 't^2', 't', '1', to
