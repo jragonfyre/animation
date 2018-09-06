@@ -91,6 +91,11 @@ covecFromPair = uncurry makeCovector
 
 makeFields ''Covector
 
+instance HasX Covector Double where
+  x = dual . x
+instance HasY Covector Double where
+  y = dual . y
+
 instance Each Covector Covector Double Double where
   -- each :: Traversal' Vector Double
   each inj Covector{_covectorDual=Vector{_vectorX=x,_vectorY=y}} = makeCovector <$> inj x <*> inj y
@@ -276,11 +281,6 @@ convtopeAsHPlanes = iso convtopeToHPlanes makeConvexPolytope
 hplanes :: Traversal' ConvexPolytope HalfPlane
 hplanes inj = fmap makeConvexPolytope . traverse inj . convtopeToHPlanes
 
-
-type Parametrization = Double -> Point  -- parametrization domain is [0,1]
-type Implicitization = Point -> Double  
--- should be 0 at curve, and nonzero not at curve, sign should change across curve
-type ApproximationStrategy = Double -> [Double]
 
 data Box = Box
   { _boxCorner :: !Point -- lower left corner

@@ -99,6 +99,12 @@ instance Subtractable Point Vector Point where
   (-.) v1 v2 = v1 & x -~ (v2 ^. x) & y -~ (v2 ^. y)
 instance Subtractable Matrix Matrix Matrix where
   (-.) mat1 mat2 = mat1 & x %~ (-.(mat2^.x)) & y %~ (-.(mat2^.y))
+instance Summable Matrix Matrix Matrix where
+  (+.) mat1 mat2 = mat1 & x %~ (+.(mat2^.x)) & y %~ (+.(mat2^.y))
+instance Summable Matrix Affine Affine where
+  (+.) mat aff = aff & linear %~ (+.mat)
+instance Summable Affine Matrix Affine where
+  (+.) aff mat = aff & linear %~ (+.mat)
 
 instance Multiplicable Double Vector Vector where 
   --(*.) :: Double -> Vector -> Vector
@@ -145,6 +151,10 @@ instance Multiplicable Vector Vector Double where
   (*.) v1 v2 = v1^.x*v2^.x+v1^.y*v2^.y
 
 instance Pointlike Vector where
+instance Pointlike Matrix where
+
+--instance Pointlike Affine where
+
 instance Polynomializable Vector Vector where
 
 instance Pointlike Point where
