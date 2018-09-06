@@ -366,6 +366,7 @@ insideConvtope conv pt = allOf hplanes (flip insideHalfPlane pt) conv
 avgPoints :: [Point] -> Point
 avgPoints ps = (1/fromIntegral (length ps) :: Double) *. foldr (+.) origin ps
 
+
 makeBoxSides :: Double -> Double -> Double -> Double -> Box
 makeBoxSides lx mx ly my =
   let
@@ -427,6 +428,12 @@ intersectionBoxes boxes =
       mx
       ly
       my
+
+boxXInterval :: Box -> (Double,Double)
+boxXInterval box = (boxLeft box, boxRight box)
+
+boxYInterval :: Box -> (Double,Double)
+boxYInterval box = (boxBottom box, boxTop box)
 
 instance (GBounded a) => GBounded [a] where
   bounds = unionBoxes . map bounds

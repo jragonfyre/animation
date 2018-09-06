@@ -1,10 +1,10 @@
 notes. I'm going to stop updating the numbers when I remove completed tasks, since it's a lot of work.
 Also going to start prioritizing (short term priorities) Also a lot of repeats here, gonna start merging them
 
-Total issues to address now: 21
+Total issues to address now: 24
 
 Urgent: (0 total)
-High: (4 total)
+High: (5 total)
 1. Improve stroking, particularly where Tiller-Hanson breaks down.
    Primarily near loops/self intersections of cubic beziers and degenerate (i.e. linear)
    quadratic/cubic beziers
@@ -13,8 +13,7 @@ High: (4 total)
    that isn't a cusp. (Do math xD)
    (More or less done,
    but frankly, this doesn't work very well for handling the related problem of near cusps)
-3. Improve Rasterization to only rasterize an object within its bounding box. 
-4. First draft documentation of code.
+3. First draft documentation of code.
    Progress
      Done:
        MathClasses,
@@ -40,7 +39,17 @@ High: (4 total)
        Geometry.PathBuilder,
        Geometry.PolyLine,
        Geometry.Types,
-Medium: (8 total)
+4. Add a mechanism for adaptive subdivision to the rendering engine
+   (See 1 and 2)
+5. Make rasterization more efficient.
+   - Rasterize only within bounding box (possibly plus one pixel for antialiasing purposes) (DONE)
+   - Possibly parallelize the scanning algorithm by computing the relevant intervals and using binary search
+     to figure out which interval you are in.
+     (This one definitely needs benchmarking to compare with current version, since having parallelized
+     rows ought to be enough to get all the practical benefits we can out of parallelism)
+   - use unboxed vectors where possible in the rasterization algorithm
+   - possibly try to update only pixels whose values change in each layer?
+Medium: (9 total)
 1. Refactor the Path/Contour/ClosedPath abstraction. 
    ClosedPath isn't a great abstraction. Also it would be great to provide a more unified interface to 
    Path/Contours. It's nice to have a type level distinction between the concepts, but they also behave very 
@@ -64,6 +73,7 @@ Medium: (8 total)
    rational beziers/nurbs, and allow computation of their bounding boxes 
 8. Add arc length/arc length parametrization of paths.
    (to implement stuff like dashing strokes and drawing markers etc)
+9. Add simple plotting engine
 Low: (10 total)
 1. Write functions to generate paths out of primitives.
    E.g. makeRoundRect Stuff -> Contour

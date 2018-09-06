@@ -42,6 +42,8 @@ import qualified Graphics.Image as I
 import Graphics.Image (RPU,RGB,Image)
 import Graphics.Image.Interface.Repa (fromRepaArrayP)
 
+import Control.Monad.IO.Class
+
 
 type Raster r a = Array r DIM2 a
 
@@ -217,6 +219,7 @@ keepFirst ps tol ((t1@(i,(x1,(s1,_)))):(t2@(j,(x2,(s2,_)))):xs) =
       t1:(keepFirst ps tol (t2:xs))
 
 -- need to switch to accelerate to get a proper speedup :/
+-- maybe?
 scanRasterizer :: (Int,Int) -> Box -> ClosedPath -> IO (Raster D Double)
 scanRasterizer (nx,ny) box cp =
   let 
@@ -323,9 +326,9 @@ scanRasterizer (nx,ny) box cp =
       putStrLn "relSegsUF"
       --putStrLn $ show $ relevantSegsUF (0,V.empty,ssegixs)
       putStrLn "relSegs"
-      putStrLn $ show relSegs
+      --putStrLn $ show relSegs
       putStrLn "critPts"
-      putStrLn $ show critPts
+      --putStrLn $ show critPts
       putStrLn "odd crit pts"
       putStrLn $ show $ V.filter (odd . length) critPts
       putStrLn "rows"
@@ -334,7 +337,6 @@ scanRasterizer (nx,ny) box cp =
       --return $ stencilAntialias gaussian1 gaussian1Weight $ R.extract (ix2 0 0) (ix2 nx ny) vals
 
 
-{-
 -- screenx increases left to right
 -- screeny increases top to bottom
 -- 0,0 is the upper left hand corner of the upper left hand corner pixel
@@ -350,26 +352,49 @@ screenToAbstract (maxx,maxy) abstractBox (screenx,screeny) =
     (boxLeft abstractBox + zoX*width, boxTop abstractBox - zoY*height)
 
 
-pixelToAbstract :: (Real a) => (a,a) -> Box -> (a,a) -> (Int,Int) -> (Double,Double)
+pixelToAbstract :: (Real a) => (a,a) -> Box -> (Int,Int) -> (a,a) -> (Double,Double)
 pixelToAbstract mx absBnds (pixx,pixy) (subpixx,subpixy) = 
   screenToAbstract mx absBnds (fromIntegral pixx + subpixx,fromIntegral pixy+subpixy)
 
+{-
 abstractToScreen :: (Int,Int) -> Box -> (Double,Double) -> (Double,Double)
 abstractToScreen (maxx,maxy) abstractBox (absx,absy) =
   let
     (width,height) = abstractBox^.dimensions.vecAsPair
 
   in
+-}
     
 
-pixelAlignedBoundingBox :: (Int,Int) -> Box -> Box -> Box
+-- computes smallest pixel aligned bounding box containing the given box (intersected with the bigBox)
+-- returns the box and its displacement in pixels
+pixelAlignedBoundingBox :: (Int,Int) -> Box -> Box -> (Box,(Int,Int),(Int,Int))
 pixelAlignedBoundingBox (nx,ny) bigBox boundBox = 
   let
-    (width,height) = box^.dimensions.vecAsPair
+    bb = intersectionBoxes [bigBox,boundBox]
+    (width,height) = bigBox^.dimensions.vecAsPair
+    llc = bigBox^.corner
     pixWidth=width/fromIntegral nx
     pixHeight=height/fromIntegral ny
+    bllc = bb^.corner
+    llcvec = bllc-.llc
+    (lcdx,lcdy) = llcvec^.vecAsPair
+    pdx = floor (lcdx/pixWidth)
+    pdy = floor (lcdy/pixHeight)
+    fcdx = pixWidth * (fromIntegral pdx)
+    fcdy = pixHeight * (fromIntegral pdy)
+    urcvec = llcvec +. (bb^.dimensions)
+    (ucdx,ucdy) = urcvec^.vecAsPair
+    pDx = ceiling (ucdx/pixWidth)
+    pDy = ceiling (ucdy/pixHeight)
+    ccdx = pixWidth * (fromIntegral pDx)
+    ccdy = pixHeight * (fromIntegral pDy)
+    (bsx,bsy) = llc^.ptAsPair
   in
--}
+    ( makeBox (makePoint (bsx+fcdx) (bsy+fcdy)) (makeVector (ccdx-fcdx) (ccdy-fcdy))
+    , (pdx,ny-pDy)
+    , (pDx-pdx,pDy-pdy)
+    )
 
 type Rasterizer r t = (Int,Int) -> Box -> r -> Raster t Double
 type MRasterizer r t m = (Int,Int) -> Box -> r -> m (Raster t Double)
@@ -394,16 +419,22 @@ render bg comp sz@(nx,ny) box reg fill rasterizer =
           id
           (\lkup ix -> ((lkup ix)*.) . fill . centIxLoc $ ix)
 
-mrender :: (Source r LRGBA, Source t Double, Monad m) =>
+mrender :: (Source r LRGBA, Source t Double, Monad m,GBounded a, MonadIO m) =>
   Raster r LRGBA -> Compositor -> (Int,Int) -> Box -> a -> Fill -> MRasterizer a t m -> m (Raster D LRGBA)
 mrender bg comp sz@(nx,ny) box reg fill rasterizer = 
   let
+    bbox = bounds reg
+    (pabb,(spx,spy),(npx,npy)) = pixelAlignedBoundingBox sz box bbox
+    lpx = spx+npx
+    lpy = spy+npy
     (width,height) = box^.dimensions.vecAsPair
     pixWidth=width/fromIntegral nx
     pixHeight=height/fromIntegral ny
     centIxLoc (Z:.i:.j) = 
       (boxLeft box + (fromIntegral i+0.5)*pixWidth,boxTop box - (fromIntegral j+0.5)*pixHeight)^.from ptAsPair
   in do
+    {-
+    -- old slow version of code.
     rast <- rasterizer sz box reg
     return 
       $ R.zipWith (flip comp) bg 
@@ -411,12 +442,69 @@ mrender bg comp sz@(nx,ny) box reg fill rasterizer =
           rast
           id
           (\lkup ix -> ((lkup ix)*.) . fill . centIxLoc $ ix)
+    -}
+    {-
+    -- yay this is faster! :D
+    rast <- rasterizer (npx,npy) pabb reg
+    liftIO $ do
+      putStrLn "box: "
+      putStrLn $ show box
+      putStrLn "pabb: "
+      putStrLn $ show pabb
+      putStrLn "(spx,spy): "
+      putStrLn $ show (spx,spy)
+    return 
+      $ R.traverse
+          bg
+          id
+          (\lkup ix@(Z:.i:.j) ->
+              if spx <= i && spy <= j && i < lpx && j < lpy
+              then
+                comp ((rast!(Z:.(i-spx):.(j-spy))) *. (fill . centIxLoc $ ix)) (lkup ix)
+              else
+                lkup ix
+          )
+    -}
+    --{-
+    -- I think this might even be slightly faster still! :)
+    rast <- rasterizer (npx,npy) pabb reg
+    liftIO $ do
+      putStrLn "box: "
+      putStrLn $ show box
+      putStrLn "pabb: "
+      putStrLn $ show pabb
+      putStrLn "(spx,spy): "
+      putStrLn $ show (spx,spy)
+    return 
+      $ R.traverse
+          bg
+          id
+          (\lkup ix@(Z:.i:.j) ->
+              let
+                base = lkup ix
+              in
+                if spx <= i && spy <= j && i < lpx && j < lpy
+                then
+                  let
+                    r = rast!(Z:.(i-spx):.(j-spy))
+                  in
+                    if r < 1e-6 -- computing compositing and fill for everything is more expensive than
+                      -- doing this comparison every time
+                      -- probably (xD) benchmarking is hard
+                    then
+                      base
+                    else
+                      comp (r *. (fill . centIxLoc $ ix)) base
+                else
+                  base
+          )
+    --}
 
 data Rasterizable t where
   Rasterizable :: a -> Fill -> Rasterizer a t -> Compositor -> Rasterizable t
 
 data MRasterizable t m where
-  MRasterizable :: a -> Fill -> MRasterizer a t m -> Compositor -> MRasterizable t m
+  MRasterizable :: (GBounded a) => a -> Fill -> MRasterizer a t m -> Compositor -> MRasterizable t m
 
 delayRasterizer :: (Source t Double) => Rasterizer a t -> Rasterizer a D
 delayRasterizer rsteriz sz bx r = R.delay $ rsteriz sz bx r
@@ -432,7 +520,7 @@ renderLayered sz box ((Rasterizable reg fill rast comp):lls) =
   in
     render lflat comp sz box reg fill rast 
 
-mRenderLayered :: (Monad m) => (Int,Int) -> Box -> [MRasterizable D m] -> m (Raster D LRGBA)
+mRenderLayered :: (Monad m, MonadIO m) => (Int,Int) -> Box -> [MRasterizable D m] -> m (Raster D LRGBA)
 mRenderLayered sz _ [] = return $ background sz
 mRenderLayered sz box ((MRasterizable reg fill rast comp):lls) = do
   lflat <- mRenderLayered sz box lls 

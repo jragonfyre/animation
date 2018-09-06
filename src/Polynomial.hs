@@ -78,20 +78,32 @@ instance (Zeroable a, Unitable b) => Unitable (CubicPoly a b) where
 -- | Evaluates a linear polynomial at a point 't' using Horner's method.
 --
 --   Cost: One '*.' and one '+.'
+evalLinearG :: (Polynomializable a b, Multiplicable c a a) => LinearPoly a b -> c -> b
+evalLinearG (a1,a0) t = t*.a1+.a0
+
+-- | Synonym for 'evalLinearG' specialized to evaluating at 'Double's
 evalLinear :: (Polynomializable a b) => LinearPoly a b -> Double -> b
-evalLinear (a1,a0) t = t*.a1+.a0
+evalLinear = evalLinearG
 
 -- | Evaluates a quadratic polynomial at a point 't' using Horner's method.
 --   
 --   Cost: Two '*.' and two '+.'
-evalQuadratic :: Polynomializable a b => QuadraticPoly a b -> Double -> b
-evalQuadratic (a2,a1,a0) t = t*.(t*.a2+.a1)+.a0
+evalQuadraticG :: (Polynomializable a b, Multiplicable c a a) => QuadraticPoly a b -> c -> b
+evalQuadraticG (a2,a1,a0) t = t*.(t*.a2+.a1)+.a0
+
+-- | Synonym for 'evalQuadraticG' specialized to evaluating at 'Double's
+evalQuadratic :: (Polynomializable a b) => QuadraticPoly a b -> Double -> b
+evalQuadratic = evalQuadraticG
 
 -- | Evaluates a cubic polynomial at a point 't' using Horner's method.
 --
 --   Cost: Three '*.' and three '+.'
+evalCubicG :: (Polynomializable a b, Multiplicable c a a) => CubicPoly a b -> c -> b
+evalCubicG (a3,a2,a1,a0) t = t*.(t*.(t*.a3+.a2)+.a1)+.a0
+
+-- | Synonym for 'evalCubicG' specialized to evaluating at 'Double's
 evalCubic :: (Polynomializable a b) => CubicPoly a b -> Double -> b
-evalCubic (a3,a2,a1,a0) t = t*.(t*.(t*.a3+.a2)+.a1)+.a0
+evalCubic = evalCubicG
 
 -- | Synonym for 'differentiateCubic'. /Deprecated./
 derivCoeffsCubic :: (Polynomializable a b, Polynomializable a a) => CubicPoly a b -> QuadraticPoly a a

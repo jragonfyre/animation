@@ -5,6 +5,7 @@ import Model
 import Stroke
 import Picture
 import Font
+import Plot
 import Graphics.Text.TrueType (loadFontFile)
 import qualified Graphics.Image as I
 import Graphics.Image (RPU,RGB,Image)
@@ -255,6 +256,7 @@ spiroPicture fo fi =
   , fill fo $ stroke strokeTestS{strokeDistance=3} spiroPath
   ]
 
+{-
 plotPicture :: (Filling a, Filling b) => a -> b -> Double -> ParamPath0 -> Double -> Picture
 plotPicture fgr fax sw pp pstep = 
   let
@@ -268,6 +270,7 @@ plotPicture fgr fax sw pp pstep =
     --, fill fax $ stroke str [xax,yax]
     , drawAxes fax (sw/2) (sw/4) (sw/10) 0.1 bbox
     ]
+-}
 
 plotPictures :: (Filling a) => a -> Double -> [(a,ParamPath0,Double)] -> Picture
 plotPictures fax sw l = 
@@ -281,7 +284,7 @@ plotPictures fax sw l =
     [ drawAxes fax (sw/2) (sw/4) (sw/10) 0.1 bbox
     ]
     
-
+{-
 drawAxes :: (Filling a) => a -> Double -> Double -> Double -> Double -> Box -> SimplePicture
 drawAxes fax axMainW axMajW axMinW axMinSep box = 
   let
@@ -322,6 +325,7 @@ drawAxes fax axMainW axMajW axMinW axMinSep box =
         (map vert [(ceiling (bl/axMinSep))..(floor (br/axMinSep))])
         ++
         (map horiz [(ceiling (bb/axMinSep))..(floor (bt/axMinSep))])
+-}
 
 -- assumes rext > rint > rpen
 spiroBoundingBox :: (Double, Double, Double) -> Box
@@ -361,6 +365,29 @@ concreteAnim = spiroAnim 150
 
 main :: IO ()
 main = do
+  writePicture 2000 "plotting-test-sin-ellipses"
+    . plotPicture 
+    . defaultPlot 
+    $ [ plotFnOfX
+          "sin"
+          sin
+          0.01
+      , plotPara
+          "circle"
+          ( \t -> makePoint (4*(cos t)) (4*(sin t)))
+          (0,2*pi)
+          0.01
+      , plotPara
+          "ellx"
+          ( \t -> makePoint (5*(cos t)) (3*(sin t)))
+          (0,2*pi)
+          0.01
+      , plotPara
+          "elly"
+          ( \t -> makePoint (3*(cos t)) (5*(sin t)))
+          (0,2*pi)
+          0.01
+      ]
   --let purpleFill = (solidFill $ LRGBA 0.5 0.2 0.7 1.0)
   font <- loadFontFile "../fonts/Caudex/Caudex-Regular.ttf"
   case font of
@@ -393,6 +420,7 @@ main = do
         (circularGaussian (makePoint 0 0) 150 (LRGBA 1 0.5 0.3 1) (LRGBA 1 0.26 0 1))
         (LRGBA 0.0 0.0 0.0 0.7)
   -}
+  {-
   sequence_ $ map
     (\i -> 
       let 
@@ -402,7 +430,7 @@ main = do
           $ concreteAnim i
     )
     [0..180]
-
+  -}
   --I.writeImage "img/circTest-main.png" $ 
   --  convertToImage . renderLayered (500,500) defaultBox $ testLayers
   {-
