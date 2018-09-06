@@ -1,3 +1,6 @@
+{-# LANGUAGE UndecidableInstances #-}
+-- needed for the instances of HasX and HasY below, which are safe, but don't satisfy the Coverage condition
+
 --
 -- Types.hs
 -- Copyright (C) 2018 jragonfyre <jragonfyre@jragonfyre>
@@ -308,4 +311,29 @@ boxTop px = px^.corner.y + px^.dimensions.y
 
 class GBounded a where
   bounds :: a -> Box
+
+instance (HasX a c, HasX b d) => HasX (a,b) (c,d) where
+  -- x :: Functor f => ((c,d) -> f (c,d)) -> (a,b) -> f (a,b)
+  x f (v1,v2) = fmap (\(cr,dr) -> (v1 & x .~ cr, v2 & x .~ dr)) (f (v1^.x,v2^.x))
+instance (HasX a d, HasX b e, HasX c f) => HasX (a,b,c) (d,e,f) where
+  -- x :: Functor f => ((c,d) -> f (c,d)) -> (a,b) -> f (a,b)
+  x f (v1,v2,v3) = fmap (\(dr,er,fr) -> (v1 & x .~ dr, v2 & x .~ er,v3 & x .~ fr)) (f (v1^.x,v2^.x,v3^.x))
+instance (HasX a e, HasX b f, HasX c g, HasX d h) => HasX (a,b,c,d) (e,f,g,h) where
+  -- x :: Functor f => ((c,d) -> f (c,d)) -> (a,b) -> f (a,b)
+  x f (v1,v2,v3,v4) =
+    fmap
+      (\(er,fr,gr,hr) -> (v1 & x .~ er, v2 & x .~ fr,v3 & x .~ gr,v4 & x .~ hr))
+      (f (v1^.x,v2^.x,v3^.x,v4^.x))
+instance (HasY a c, HasY b d) => HasY (a,b) (c,d) where
+  -- y :: Functor f => ((c,d) -> f (c,d)) -> (a,b) -> f (a,b)
+  y f (v1,v2) = fmap (\(cr,dr) -> (v1 & y .~ cr, v2 & y .~ dr)) (f (v1^.y,v2^.y))
+instance (HasY a d, HasY b e, HasY c f) => HasY (a,b,c) (d,e,f) where
+  -- y :: Functor f => ((c,d) -> f (c,d)) -> (a,b) -> f (a,b)
+  y f (v1,v2,v3) = fmap (\(dr,er,fr) -> (v1 & y .~ dr, v2 & y .~ er,v3 & y .~ fr)) (f (v1^.y,v2^.y,v3^.y))
+instance (HasY a e, HasY b f, HasY c g, HasY d h) => HasY (a,b,c,d) (e,f,g,h) where
+  -- y :: Functor f => ((c,d) -> f (c,d)) -> (a,b) -> f (a,b)
+  y f (v1,v2,v3,v4) =
+    fmap
+      (\(er,fr,gr,hr) -> (v1 & y .~ er, v2 & y .~ fr,v3 & y .~ gr,v4 & y .~ hr))
+      (f (v1^.y,v2^.y,v3^.y,v4^.y))
 

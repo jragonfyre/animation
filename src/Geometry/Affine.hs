@@ -14,7 +14,7 @@ import Geometry.Types
 import PolynomialSolver
 import MathClasses
 
-import Control.Lens (over, (&), (^.), (%~), from, each, (^..), (*~), (+~), (-~), allOf)
+import Control.Lens (over, (&), (^.), (%~), from, each, (^..), (*~), (+~), (-~), (.~), allOf)
 import Control.Lens.Traversal
 
 import Data.Maybe (mapMaybe)
@@ -582,4 +582,8 @@ boxToCenterAndRadii box =
     d2 = (0.5::Double) *. dim
   in
     (corn+.d2,d2^.x,d2^.y)
+
+
+
+
 

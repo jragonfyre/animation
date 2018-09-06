@@ -29,6 +29,7 @@ type CubPoly = CubicPoly Double Double
 -- | Type synonym for a cubic polynomial generalized
 type CubicPoly a b = (a,a,a,b)
 
+
 instance (Summable a c e, Summable b d f) => Summable (LinearPoly a b) (LinearPoly c d) (LinearPoly e f) where
   (+.) (a1,a0) (b1,b0) = (a1+.b1,a0+.b0)
 instance (Subtractable a c e, Subtractable b d f) =>
@@ -74,15 +75,21 @@ instance (Zeroable a, Zeroable b) => Zeroable (CubicPoly a b) where
 instance (Zeroable a, Unitable b) => Unitable (CubicPoly a b) where
   unit = (zero,zero,zero,unit)
 
--- | evaluates a linear polynomial at a point 't'
+-- | Evaluates a linear polynomial at a point 't' using Horner's method.
+--
+--   Cost: One '*.' and one '+.'
 evalLinear :: (Polynomializable a b) => LinearPoly a b -> Double -> b
 evalLinear (a1,a0) t = t*.a1+.a0
 
--- | evaluates a quadratic polynomial at a point 't'
+-- | Evaluates a quadratic polynomial at a point 't' using Horner's method.
+--   
+--   Cost: Two '*.' and two '+.'
 evalQuadratic :: Polynomializable a b => QuadraticPoly a b -> Double -> b
 evalQuadratic (a2,a1,a0) t = t*.(t*.a2+.a1)+.a0
 
--- | evaluates a cubic polynomial at a point 't'
+-- | Evaluates a cubic polynomial at a point 't' using Horner's method.
+--
+--   Cost: Three '*.' and three '+.'
 evalCubic :: (Polynomializable a b) => CubicPoly a b -> Double -> b
 evalCubic (a3,a2,a1,a0) t = t*.(t*.(t*.a3+.a2)+.a1)+.a0
 
