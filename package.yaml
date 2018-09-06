@@ -34,11 +34,12 @@ dependencies:
 - data-default
 - lens
 - vector-algorithms
-#- deepseq
+- deepseq
 #- bytestring
 #- binary
 - FontyFruity
-- tasty
+- tasty # for unit tests
+- criterion # for benchmarks
 - linear # for low dimensional linear algebra. For now only using it for 4D vectors, but if it is faster,
          # will switch my 2D linear algebra over to this as well.
 - hmatrix-gsl # for integration, general polynomial root finding etc. 

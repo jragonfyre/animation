@@ -48,6 +48,7 @@ defaultPlotGeom = PlotGeom
 defaultPlot :: [PlotFn] -> Plot
 defaultPlot = Plot defaultPlotGeom Nothing defaultAxisColor . zip defaultColors
 
+emptyPlot :: Plot
 emptyPlot = Plot defaultPlotGeom Nothing defaultAxisColor []
 
 data PlotGeom = PlotGeom

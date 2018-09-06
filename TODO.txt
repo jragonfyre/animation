@@ -42,13 +42,15 @@ High: (5 total)
 4. Add a mechanism for adaptive subdivision to the rendering engine
    (See 1 and 2)
 5. Make rasterization more efficient.
-   - Rasterize only within bounding box (possibly plus one pixel for antialiasing purposes) (DONE)
    - Possibly parallelize the scanning algorithm by computing the relevant intervals and using binary search
      to figure out which interval you are in.
      (This one definitely needs benchmarking to compare with current version, since having parallelized
      rows ought to be enough to get all the practical benefits we can out of parallelism)
+     Alternatively, compute a 1D spline?
    - use unboxed vectors where possible in the rasterization algorithm
    - possibly try to update only pixels whose values change in each layer?
+   - Get rid of MSAA antialiasing, it adds about 20%-25% to code run time with very little benefit.
+   - Related to previous point, perhaps improve the heuristic AA to minimize any loss in quality
 Medium: (9 total)
 1. Refactor the Path/Contour/ClosedPath abstraction. 
    ClosedPath isn't a great abstraction. Also it would be great to provide a more unified interface to 

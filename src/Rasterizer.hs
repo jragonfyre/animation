@@ -218,6 +218,117 @@ keepFirst ps tol ((t1@(i,(x1,(s1,_)))):(t2@(j,(x2,(s2,_)))):xs) =
     else
       t1:(keepFirst ps tol (t2:xs))
 
+scanRasterizerNoAA :: (Int,Int) -> Box -> ClosedPath -> IO (Raster D Double)
+scanRasterizerNoAA (nx,ny) box cp =
+  let 
+    bt=boxTop box
+    segsPS = toWholeSegsPredSucc cp
+    segs = V.map fst segsPS
+    ps = V.map snd segsPS
+    segixs = V.enumFromN 0 (V.length segs)
+    --ssegs = V.fromList $ L.sortOn (negate . boxTop . wpSegBoundingBox) segs
+    --ssegixs satisfies V.map ((V.!) segs) ssegixs == ssegs
+    --invssegixs satisfies V.map ((V.!) ssegixs) invssegixs = V.enumFrom N 0 (V.length segs)
+    --and vice versa
+    ssegixs = V.fromList $ L.sortOn (negate . boxTop . wpSegBoundingBox . (V.!) segs) $ V.toList segixs
+    --invssegixs = V.map fst V.fromList $ L.sortOn snd . V.toList V.zip segixs ssegixs
+    --ssegixs = V.enumFromN 0 (V.length ssegs)
+    segstopy = fmap (boxTop . wpSegBoundingBox) segs
+    --segstopy = fmap (boxTop . wpSegBoundingBox) ssegs
+    segsbottomy = fmap (boxBottom . wpSegBoundingBox) segs
+    --segsbottomy = fmap (boxBottom . wpSegBoundingBox) ssegs
+    (width,height) = box^.dimensions.vecAsPair
+    --(lx,ly) = box^.corner.ptAsPair
+    pixWidth=width/fromIntegral nx
+    pixHeight=height/fromIntegral ny
+    centxLoc = \i -> boxLeft box + (0.5+fromIntegral i) * pixWidth
+    centyLoc = \j -> bt - (0.5+fromIntegral j)*pixHeight
+    --ylocInv = \h -> (bt - h)/pixHeight
+    relevantSegsUF = \(j,prevCursegs,prevRemsegs) -> 
+      let
+        yv = centyLoc j
+        (newcsegs,newRemsegs) = V.span (\i -> yv <= (V.!) segstopy i) prevRemsegs
+        newCursegs = V.filter (\i -> yv >= (V.!) segsbottomy i) ((V.++) newcsegs prevCursegs)
+      in
+        if j > ny
+        then
+          Nothing
+        else
+          Just (newCursegs, (j+1,newCursegs,newRemsegs))
+    relSegs = V.unfoldrN (ny+1) relevantSegsUF (0,V.empty,ssegixs)
+    critPts = 
+      V.imap
+        (\j sgixs -> 
+          L.map snd
+            . keepFirst ps (scanRasterDuplicateTolerance pixWidth)
+            . L.sortOn (fst . snd)
+            . L.concat 
+            . V.toList 
+            $ fmap
+                (\i -> 
+                  fmap (i,)
+                    $ solveWPSegNTF scanRasterBezierTolerance (centyLoc j) 
+                    --  $ (V.!) ssegs i
+                    $ (V.!) segs i
+                )
+                sgixs
+        )
+        relSegs
+    unfoldRow = \(i, cursum, remcrits) -> 
+      case remcrits of
+        [] ->
+          Just (indicate (cursum /= 0),(i+1,cursum,[]))
+        _ ->
+          let
+            xv = centxLoc i
+            (ncrits, rcrits) = L.span (\c -> (fst c) < xv-pixWidth) remcrits
+            ccrits = L.takeWhile (\c -> (fst c) < xv +pixWidth) rcrits
+            newsum = cursum + (sum $ map (signValue . fst . snd) (ncrits))
+            tsum = newsum + (sum $ map (signValue . fst . snd) (L.takeWhile (\c -> (fst c) < xv) ccrits))
+            d = case ccrits of 
+              [] ->
+                1
+              ((x,(_,xscale)):_) -> 
+                1/(1+(exp (-4*(xv-x)*xscale/pixWidth)))
+                --1/(1+(exp (-7*(xv-x)*xscale/pixWidth)))
+                --0.5*(exp (-10*((xv-x)*xscale/(pixWidth))^2))
+          in
+            -- TODO: Fix this expression
+            --Just (if (tsum == 0) then 0+d else 1-d, (i+1,newsum,rcrits))
+            Just (d*(indicate (tsum/=0)) + (1-d)*(indicate (newsum /= 0)), (i+1,newsum,rcrits))
+    rows = V.map (\cs -> V.unfoldrN (nx+1) unfoldRow (0,0,cs))  critPts
+    vals =
+      fromFunction (ix2 nx ny) 
+        $ \(Z:.i:.j) ->
+            ((V.!) ((V.!) rows j) i)
+  in
+    do
+      {-
+      --debugging code
+      putStrLn "segs"
+      --putStrLn $ show segs
+      putStrLn "ssegs"
+      --putStrLn $ show ssegs
+      putStrLn "ssegixs"
+      --putStrLn $ show ssegixs
+      putStrLn "segstopy"
+      --putStrLn $ show segstopy
+      putStrLn "segsbottomy"
+      --putStrLn $ show segsbottomy
+      putStrLn "relSegsUF"
+      --putStrLn $ show $ relevantSegsUF (0,V.empty,ssegixs)
+      putStrLn "relSegs"
+      --putStrLn $ show relSegs
+      putStrLn "critPts"
+      --putStrLn $ show critPts
+      putStrLn "odd crit pts"
+      putStrLn $ show $ V.filter (odd . length) critPts
+      putStrLn "rows"
+      --putStrLn $ show rows
+      --return $ R.extract (ix2 0 0) (ix2 nx ny) vals
+      -}
+      return vals
+
 -- need to switch to accelerate to get a proper speedup :/
 -- maybe?
 scanRasterizer :: (Int,Int) -> Box -> ClosedPath -> IO (Raster D Double)
@@ -313,6 +424,8 @@ scanRasterizer (nx,ny) box cp =
         corners
   in
     do
+      {-
+      --debugging code
       putStrLn "segs"
       --putStrLn $ show segs
       putStrLn "ssegs"
@@ -333,6 +446,7 @@ scanRasterizer (nx,ny) box cp =
       putStrLn $ show $ V.filter (odd . length) critPts
       putStrLn "rows"
       --putStrLn $ show rows
+      -}
       return $ R.extract (ix2 0 0) (ix2 nx ny) vals
       --return $ stencilAntialias gaussian1 gaussian1Weight $ R.extract (ix2 0 0) (ix2 nx ny) vals
 
@@ -446,6 +560,8 @@ mrender bg comp sz@(nx,ny) box reg fill rasterizer =
     {-
     -- yay this is faster! :D
     rast <- rasterizer (npx,npy) pabb reg
+    {-
+    -- debugging code
     liftIO $ do
       putStrLn "box: "
       putStrLn $ show box
@@ -453,6 +569,7 @@ mrender bg comp sz@(nx,ny) box reg fill rasterizer =
       putStrLn $ show pabb
       putStrLn "(spx,spy): "
       putStrLn $ show (spx,spy)
+    -}
     return 
       $ R.traverse
           bg
@@ -468,6 +585,8 @@ mrender bg comp sz@(nx,ny) box reg fill rasterizer =
     --{-
     -- I think this might even be slightly faster still! :)
     rast <- rasterizer (npx,npy) pabb reg
+    {-
+    -- debugging code
     liftIO $ do
       putStrLn "box: "
       putStrLn $ show box
@@ -475,6 +594,7 @@ mrender bg comp sz@(nx,ny) box reg fill rasterizer =
       putStrLn $ show pabb
       putStrLn "(spx,spy): "
       putStrLn $ show (spx,spy)
+    -}
     return 
       $ R.traverse
           bg
@@ -534,6 +654,17 @@ renderPicture sz bx spics =
     $ map 
       (\(SimplePicture fl cp) ->
           MRasterizable cp fl scanRasterizer mappend
+      )
+      spics
+
+renderPictureNoAA :: (Int,Int) -> Box -> Picture -> IO (Raster D LRGBA)
+renderPictureNoAA sz bx spics = 
+  mRenderLayered
+    sz
+    bx 
+    $ map 
+      (\(SimplePicture fl cp) ->
+          MRasterizable cp fl scanRasterizerNoAA mappend
       )
       spics
 

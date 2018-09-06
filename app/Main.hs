@@ -12,6 +12,9 @@ import Graphics.Image (RPU,RGB,Image)
 import Control.Monad (void)
 import Control.Lens ((^.),to,re)
 import Control.Lens.Iso (from)
+import Criterion
+import Criterion.Main
+import Control.DeepSeq
 
 --import Geometry.Region.Types
 
@@ -247,6 +250,22 @@ writePicture height name pic =
       ("img/picture-"++name++"-("++(show width)++","++(show height)++").png")
       (convertToImage raster)
 
+writePictureNoAA :: Int -> String -> Picture -> IO ()
+writePictureNoAA height name pic =
+  let
+    bbox = bounds pic
+    (w,h) = bbox^.dimensions.vecAsPair
+    width = ceiling $ (w/h) * fromIntegral height
+    nw = h*(fromIntegral width)/(fromIntegral height)
+    asprat = makeVector nw h
+    border = (0.05::Double) *. asprat
+    nbox = makeBox ((bbox^.corner)-.border) ((1.1::Double) *. asprat)
+  in do
+    raster <- renderPictureNoAA (width,height) nbox pic
+    I.writeImage
+      ("img/picture-noaa-"++name++"-("++(show width)++","++(show height)++").png")
+      (convertToImage raster)
+
 spiroPath :: Path
 spiroPath = makeSpirograph (100,30,20) 3 10000
 
@@ -365,29 +384,43 @@ concreteAnim = spiroAnim 150
 
 main :: IO ()
 main = do
-  writePicture 2000 "plotting-test-sin-ellipses"
-    . plotPicture 
-    . defaultPlot 
-    $ [ plotFnOfX
-          "sin"
-          sin
-          0.01
-      , plotPara
-          "circle"
-          ( \t -> makePoint (4*(cos t)) (4*(sin t)))
-          (0,2*pi)
-          0.01
-      , plotPara
-          "ellx"
-          ( \t -> makePoint (5*(cos t)) (3*(sin t)))
-          (0,2*pi)
-          0.01
-      , plotPara
-          "elly"
-          ( \t -> makePoint (3*(cos t)) (5*(sin t)))
-          (0,2*pi)
-          0.01
-      ]
+  let
+    ppic 
+      = plotPicture 
+      . defaultPlot 
+      $ [ plotFnOfX
+            "sin"
+            sin
+            0.01
+        , plotPara
+            "circle"
+            ( \t -> makePoint (4*(cos t)) (4*(sin t)))
+            (0,2*pi)
+            0.01
+        , plotPara
+            "ellx"
+            ( \t -> makePoint (5*(cos t)) (3*(sin t)))
+            (0,2*pi)
+            0.01
+        , plotPara
+            "elly"
+            ( \t -> makePoint (3*(cos t)) (5*(sin t)))
+            (0,2*pi)
+            0.01
+        ]
+  {-
+  defaultMain
+    [ bgroup
+        "antialiasing-testing" 
+        [ bench "AA" . nfIO $ writePicture 2000 "sin-ellipses-aa" ppic
+        , bench "No AA" . nfIO $ writePictureNoAA 2000 "sin-ellipses-noaa" ppic
+        , bench "AA after ppic evaluated" . nfIO $ writePicture 2000 "plotting-test-sin-ellipses" ppic
+        , bench "No AA control" . nfIO $ writePictureNoAA 2000 "plotting-test-sin-ellipses" ppic
+        , bench "AA after ppic evaluated control" . nfIO $ writePicture 2000 "plotting-test-sin-ellipses" ppic
+        , bench "No AA control control" . nfIO $ writePictureNoAA 2000 "plotting-test-sin-ellipses" ppic
+        ]
+    ]
+  -}
   --let purpleFill = (solidFill $ LRGBA 0.5 0.2 0.7 1.0)
   font <- loadFontFile "../fonts/Caudex/Caudex-Regular.ttf"
   case font of
@@ -413,7 +446,7 @@ main = do
       --writeString 1000 ft "Hello World!" (\pt -> LRGBA ((sin ((pt^.x)/100))^2) ((cos ((pt^. x)/101))^2) 0.3 1.0)
       --writeString 1000 ft "Hiu bebisar!" (\pt -> LRGBA ((sin ((pt^.x)/100))^2) ((cos ((pt^. x)/101))^2) 0.3 1.0)
       return ()
-  --writePicture 2000 "penguin" penguin
+  writePictureNoAA 2000 "penguin" penguin
   {-
   writePicture 1000 "spirograph-test" 
     $ spiroPicture 
