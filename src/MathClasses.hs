@@ -117,7 +117,8 @@ class (Multiplicable Double a a, AbGroup a) => Vectorlike a where
 instance (Multiplicable Double a a, AbGroup a) => Vectorlike a where
 
 -- | class synonym to denote types that will behave ok in a Polynomial situation
-class (Vectorlike a, Summable a b b, Subtractable b b a, Pointlike b) => Polynomializable a b | b -> a where
+class (Vectorlike a, Summable a b b, Subtractable b b a, Subtractable b a b, Pointlike b) =>
+  Polynomializable a b | b -> a where
 
 instance Pointlike Double where
 instance Polynomializable Double Double where

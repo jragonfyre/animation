@@ -28,6 +28,7 @@ module Spline
 -- Less low priority is of course the actual 4d matrices/vectors. Those are crucial to improve.
 -- Hm. Maybe switch to the linear library by edward kmett?
 
+import MathClasses
 import Polynomial
 
 import Data.Maybe (fromJust)
@@ -36,39 +37,46 @@ import Data.List (nub)
 import Data.Vector (Vector, (!))
 import qualified Data.Vector as V
 
-data SplinePoint 
-  = C1 !Double !Double -- ^ value of the function and the derivative at the point
-  | C0 !Double !Double !Double -- ^ value of the function at the point,
+
+data SplinePointG a b
+  = C1 !b !a -- ^ value of the function and the derivative at the point
+  | C0 !b !a !a -- ^ value of the function at the point,
                                --   left derivative at the point, right derivative at the point
-  | NC !Double !Double !Double !Double -- ^ value of the function at the left,
+  | NC !b !b !a !a -- ^ value of the function at the left,
                                        --   value of the function at the right,
                                        --   left derivative,
                                        --   right derivative
   deriving (Eq,Ord,Read,Show)
 
-leftValue :: SplinePoint -> Double
+-- | assumes (tho it isn't essential that it is) that the tangent is normalized to unit length
+mkG1 :: Vectorlike a => b -> a -> (Double,Double) -> SplinePointG a b
+mkG1 v nTang (lscale,rscale) = C0 v (lscale*.nTang) (rscale*.nTang)
+
+type SplinePoint = SplinePointG Double Double
+
+leftValue :: SplinePointG a b -> b
 leftValue (C1 val _) = val
 leftValue (C0 val _ _) = val
 leftValue (NC val _ _ _) = val
 
-rightValue :: SplinePoint -> Double
+rightValue :: SplinePointG a b -> b
 rightValue (C1 val _) = val
 rightValue (C0 val _ _) = val
 rightValue (NC _ val _ _) = val
 
-leftDerivative :: SplinePoint -> Double
+leftDerivative :: SplinePointG a b -> a
 leftDerivative (C1 _ val) = val
 leftDerivative (C0 _ val _) = val
 leftDerivative (NC _ _ val _) = val
 
-rightDerivative :: SplinePoint -> Double
+rightDerivative :: SplinePointG a b -> a
 rightDerivative (C1 _ val) = val
 rightDerivative (C0 _ _ val) = val
 rightDerivative (NC _ _ _ val) = val
 
 -- | maps a 'C1' point to a 'C0' point, and 'C0' point to a 'NC' point, 
 --   and is the identity on 'NC' points
-decreaseContinuity :: SplinePoint -> SplinePoint
+decreaseContinuity :: SplinePointG a b -> SplinePointG a b
 decreaseContinuity (C1 val der) = C0 val der der
 decreaseContinuity (C0 val lder rder) = NC val val lder rder
 decreaseContinuity pt = pt
@@ -79,18 +87,19 @@ data BoundaryPolicy
   | ExtendLinear
 -}
 
-data SplineSegment
+type HSpline = HSplineG Double Double
 
-data HSpline = HSpline
-  { knots :: Vector (Double,SplinePoint)
+data HSplineG a b = HSpline
+  { knots :: Vector (Double,SplinePointG a b)
   , bounds :: !(Double,Double)
   --, boundaryPolicy :: !BoundaryPolicy
-  , preF :: !LinPoly
-  , postF :: !LinPoly
-  , intFs :: Vector (CubPoly)
+  , preF :: !(LinearPoly a b)
+  , postF :: !(LinearPoly a b)
+  , intFs :: Vector (CubicPoly a b)
   }
   deriving (Eq,Ord,Show,Read)
 
+{-
 -- derivative is (6,-6,0)
 hsBasisZ :: CubPoly
 hsBasisZ = (2,-3,0,1)
@@ -106,29 +115,37 @@ hsBasisZP = (1,-2,1,0)
 -- derivative is (3,-2,0)
 hsBasisOP :: CubPoly
 hsBasisOP = (1,-1,0,0)
+-}
 
 -- ugh more polynomial bases :/
 -- basis: 
 -- ax^3 + bx^2 + 1 -- a+b+1=0, 3a+2b = 0 => a = 2, b=-3
 -- a(x-1)^3+b(x-1)^2 + 1 -- -a + b + 1 = 0, 3a-2b = 0 => 2a-2b=2, a = -2, b=-3
-buildSplineSeg :: (Double,SplinePoint) -> (Double,SplinePoint) -> CubPoly
+buildSplineSeg :: Polynomializable a b =>
+  (Double,SplinePointG a b) -> (Double,SplinePointG a b) -> CubicPoly a b
 buildSplineSeg (t0,sp0) (t1,sp1) =
   let
     rat = t1-t0
     lv = rightValue sp0
-    ld = (rightDerivative sp0)*rat
+    ld = rat*.(rightDerivative sp0)
     rv = leftValue sp1
-    rd = (leftDerivative sp1)*rat
+    rd = rat*.(leftDerivative sp1)
   in
-    composeCubLin (2*lv-2*rv+ld+rd,-3*lv+3*rv-2*ld-rd,ld,lv) (1/rat,-t0/rat)
+    composeCubLin 
+      ( (2::Double)*.(lv-.rv)+.ld+.rd
+      , (3::Double)*.(rv-.lv) -. (2::Double)*.ld -. rd
+      , ld
+      , lv
+      )
+      (1/rat,-t0/rat)
 
 -- build a linear poly given a point on its graph and its slope
 -- y-y0=m(t-t0)
-buildLinSeg :: (Double,Double) -> Double -> LinPoly
-buildLinSeg (t0,y0) m = (m,y0-m*t0)
+buildLinSeg :: Polynomializable a b => (Double,b) -> a -> LinearPoly a b
+buildLinSeg (t0,y0) m = (m, y0 -. t0*.m)
 
 -- knots must be sorted by time and nonempty
-buildHSpline :: Vector (Double,SplinePoint) -> HSpline
+buildHSpline :: Polynomializable a b => Vector (Double,SplinePointG a b) -> HSplineG a b
 buildHSpline vec =
   let
     (ft,fp) = V.head vec
@@ -147,7 +164,7 @@ buildHSpline vec =
 
 
 -- all intervals are half open with open side on the right
-evaluateHSpline :: HSpline -> Double -> Double
+evaluateHSpline :: Polynomializable a b => HSplineG a b -> Double -> b
 evaluateHSpline hspline t = 
   let
     (l,r) = bounds hspline
@@ -167,14 +184,18 @@ evaluateHSpline hspline t =
         in
           evalCubic ((intFs hspline)!(i-1)) t
 
-interpolateDifferentiable :: (Double -> Double, Double -> Double) -> Vector Double -> HSpline
+-- | probably not useful for two dimensional functions
+interpolateDifferentiable :: Polynomializable a b => 
+  (Double -> b, Double -> a) -> Vector Double -> HSplineG a b
 interpolateDifferentiable (f,fp) ts = buildHSpline $ V.zip ts (V.zipWith C1 (fmap f ts) (fmap fp ts))
 
-interpolateDifferentiableEvenly :: (Double -> Double, Double -> Double) -> (Double,Double) -> Double -> HSpline
+interpolateDifferentiableEvenly :: Polynomializable a b => 
+  (Double -> b, Double -> a) -> (Double,Double) -> Double -> HSplineG a b
 interpolateDifferentiableEvenly fs (s,e) st = 
   let
     lpt = (floor ((e-s)/st)) :: Int 
     ts = V.fromList (nub $ (fmap ((*st) . fromIntegral) [0..lpt]) ++ [e])
   in
     interpolateDifferentiable fs ts
+
 
