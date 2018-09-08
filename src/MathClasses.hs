@@ -115,10 +115,11 @@ type AbGroup a = (Summable a a a, Zeroable a, Negatable a, Subtractable a a a)
 type Vectorlike a = (AbGroup a, Multiplicable Double a a)
 
 -- | class synonym to denote types that will behave ok in a Polynomial situation
-class (Vectorlike a, Summable a b b, Subtractable b b a, Subtractable b a b, Pointlike b) =>
-  Polynomializable a b | b -> a where
+type Polynomializable a b = (Vectorlike a, Summable a b b, Subtractable b b a, Subtractable b a b, Pointlike b)
+--class (Vectorlike a, Summable a b b, Subtractable b b a, Subtractable b a b, Pointlike b) =>
+--  Polynomializable a b | b -> a where
 
-class (Vectorlike (D a), Summable (D a) a a, Subtractable a a (D a), Subtractable a (D a) a, Pointlike a) =>
+class (Polynomializable (D a) a) =>
   Differentiable a where
   type D a :: *
   type D a = a
@@ -127,7 +128,7 @@ class (Vectorlike (D a), Summable (D a) a a, Subtractable a a (D a), Subtractabl
 --  type D b = a
 
 instance Pointlike Double where
-instance Polynomializable Double Double where
+--instance Polynomializable Double Double where
 instance Differentiable Double where
 
 instance Summable Double Double Double where 
@@ -184,6 +185,56 @@ instance (Negatable a, Negatable b, Negatable c, Negatable d) => Negatable (a,b,
 instance (Zeroable a, Zeroable b, Zeroable c, Zeroable d) => Zeroable (a,b,c,d) where
   zero = (zero,zero,zero,zero)
 
---instance Pointlike 
+instance (Pointlike a, Pointlike b) => Pointlike (a,b) where
+  affineCombo (a1,b1) (t,(a2,b2)) = (affineCombo a1 (t,a2),affineCombo b1 (t,b2))
+  affineComboGen (a1,b1) xs =
+    let
+      as = map (\(t,(a,b)) -> (t,a)) xs
+      bs = map (\(t,(a,b)) -> (t,b)) xs
+    in
+      (affineComboGen a1 as,affineComboGen b1 bs)
+instance (Pointlike a, Pointlike b, Pointlike c) => Pointlike (a,b,c) where
+  affineCombo (a1,b1,c1) (t,(a2,b2,c2)) = 
+    ( affineCombo a1 (t,a2)
+    , affineCombo b1 (t,b2)
+    , affineCombo c1 (t,c2)
+    )
+  affineComboGen (a1,b1,c1) xs =
+    let
+      as = map (\(t,(a,_,_)) -> (t,a)) xs
+      bs = map (\(t,(_,b,_)) -> (t,b)) xs
+      cs = map (\(t,(_,_,c)) -> (t,c)) xs
+    in
+      ( affineComboGen a1 as
+      , affineComboGen b1 bs
+      , affineComboGen c1 cs
+      )
+instance (Pointlike a, Pointlike b, Pointlike c, Pointlike d) => Pointlike (a,b,c,d) where
+  affineCombo (a1,b1,c1,d1) (t,(a2,b2,c2,d2)) = 
+    ( affineCombo a1 (t,a2)
+    , affineCombo b1 (t,b2)
+    , affineCombo c1 (t,c2)
+    , affineCombo d1 (t,d2)
+    )
+  affineComboGen (a1,b1,c1,d1) xs =
+    let
+      as = map (\(t,(a,_,_,_)) -> (t,a)) xs
+      bs = map (\(t,(_,b,_,_)) -> (t,b)) xs
+      cs = map (\(t,(_,_,c,_)) -> (t,c)) xs
+      ds = map (\(t,(_,_,_,d)) -> (t,d)) xs
+    in
+      ( affineComboGen a1 as
+      , affineComboGen b1 bs
+      , affineComboGen c1 cs
+      , affineComboGen d1 ds
+      )
+
+instance (Differentiable a, Differentiable b) => Differentiable (a,b) where
+  type D (a,b) = (D a, D b)
+instance (Differentiable a, Differentiable b, Differentiable c) => Differentiable (a,b,c) where
+  type D (a,b,c) = (D a, D b, D c)
+instance (Differentiable a, Differentiable b, Differentiable c, Differentiable d) =>
+  Differentiable (a,b,c,d) where
+  type D (a,b,c,d) = (D a, D b, D c, D d)
 
 

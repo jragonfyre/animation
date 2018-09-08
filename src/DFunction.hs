@@ -6,7 +6,7 @@
 --
 
 module DFunction
-  (
+  ( module DFunction
   ) where
 
 import MathClasses
@@ -17,7 +17,7 @@ import Control.Lens
 
 import Paired
 
-import Prelude hiding ((.),id)
+import Prelude hiding ((.),id,uncurry)
 
 data DFunction a b where
   DFunction :: (Differentiable a, Differentiable b) => (a -> b) -> (a -> (D a -> D b)) -> DFunction a b
@@ -29,6 +29,15 @@ function = lens (\(DFunction f _) -> f) (\(DFunction _ df) nf -> DFunction nf df
 
 dFunction :: Lens' (DFunction a b) (a -> (D a -> D b))
 dFunction = lens (\(DFunction _ df) -> df) (\(DFunction f _) nf -> DFunction f nf)
+
+evaluate :: DFunction a b -> a -> b
+evaluate (DFunction f _) = f
+
+derivative :: DFunction a b -> a -> (D a -> D b)
+derivative (DFunction _ df) = df
+
+gradient :: DFunction Double b -> Double -> D b
+gradient (DFunction _ df) = flip df 1
 
 idF1 :: (Differentiable a) => DFunction a a
 idF1 = DFunction id $ const id
@@ -53,35 +62,53 @@ instance Category DFunction where
   (.) = composeF1
   id = idF1
 
-dSin :: DFunction Double Double
-dSin = DFunction sin (\t -> ((cos t)*))
+sinD :: DFunction Double Double
+sinD = DFunction sin (\t -> ((cos t)*))
 
-dCos :: DFunction Double Double
-dCos = DFunction cos (\t -> negate . ((sin t)*))
+cosD :: DFunction Double Double
+cosD = DFunction cos (\t -> negate . ((sin t)*))
 
 type PairedDifferentiable b = 
   ( Paired b
   , Paired (D b)
+  , Differentiable b
   , Differentiable (TLf b)
   , Differentiable (TRt b)
   , TLf (D b) ~ D (TLf b)
   , TRt (D b) ~ D (TRt b)
   )
 
---toPairD :: PairedDifferentiable b => DFunction 
+toPairD :: PairedDifferentiable b => DFunction b (TLf b, TRt b)
+toPairD = DFunction toPair (const toPair)
 
-{-
-instance ( Paired b
-         , Paired (D b)
-         , Differentiable (TLf b)
-         , Differentiable (TRt b)
-         , TLf (D b) ~ D (TLf b)
-         , TRt (D b) ~ D (TRt b)
+fstD :: (Differentiable b, Differentiable c) => DFunction (b,c) b
+fstD = DFunction fst (const fst)
+
+sndD :: (Differentiable b, Differentiable c) => DFunction (b,c) c
+sndD = DFunction snd (const snd)
+
+instance ( PairedDifferentiable b
+         , Differentiable a
          ) => Paired (DFunction a b) where
   type TLf (DFunction a b) = DFunction a (TLf b)
   type TRt (DFunction a b) = DFunction a (TRt b)
-  toPair f = (fst . toPair . f, snd . toPair . f)
-  fromPair (f,g) = \t -> fromPair (f t, g t)
--}
+  toPair f = (fstD . toPairD . f, sndD . toPairD . f)
+  fromPair (DFunction f df, DFunction g dg) = 
+    DFunction
+      (\t -> fromPair (f t, g t))
+      (\t dt -> fromPair (df t dt, dg t dt))
+
+sumD :: (Differentiable a, Differentiable b, Differentiable c, Summable a b c, Summable (D a) (D b) (D c))
+  => DFunction (a,b) c
+sumD = DFunction (uncurry (+.)) (const (uncurry (+.)))
+
+productD :: ( Differentiable a
+            , Differentiable b
+            , Differentiable c
+            , Multiplicable a b c
+            , Multiplicable a (D b) (D c)
+            , Multiplicable (D a) b (D c)
+            ) => DFunction (a,b) c
+productD = DFunction (uncurry (*.)) (\(a,b) (da,db) -> (a*.db +. da*.b))
 
 

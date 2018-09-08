@@ -110,6 +110,8 @@ instance Multiplicable Double Vector Vector where
   --(*.) :: Double -> Vector -> Vector
   (*.) x v1 = v1 & each *~ x
   --(y,z) = (x*y,x*z)
+instance Multiplicable Vector Double Vector where 
+  (*.) v1 x = v1 & each *~ x
 instance Multiplicable Double Covector Covector where
   (*.) x cv1 = cv1 & each *~ x
 instance Multiplicable Covector Vector Double where
@@ -118,6 +120,8 @@ instance Multiplicable Double Point Point where
   (*.) x p1 = p1 & each *~ x
 instance Multiplicable Double Matrix Matrix where 
   (*.) x mat = mat & each %~ (x *.)
+instance Multiplicable Matrix Double Matrix where 
+  (*.) mat x = mat & each %~ (x *.)
 instance Multiplicable Matrix Vector Vector where 
   (*.) mat vec = (vec^.x) *. (mat^.x) +. (vec^.y) *. (mat^.y)
 instance Multiplicable Covector Matrix Covector where
@@ -155,7 +159,7 @@ instance Pointlike Matrix where
 
 --instance Pointlike Affine where
 
-instance Polynomializable Vector Vector where
+--instance Polynomializable Vector Vector where
 instance Differentiable Vector where
 
 instance Pointlike Point where
@@ -166,11 +170,11 @@ instance Pointlike Point where
   -- hmmmmm
   -- oh well, this works for now.
 
-instance Polynomializable Vector Point where
+--instance Polynomializable Vector Point where
 instance Differentiable Point where
   type D Point = Vector
 
-instance Polynomializable Matrix Matrix where
+--instance Polynomializable Matrix Matrix where
 instance Differentiable Matrix where
 
 instance Geometric Vector where
