@@ -49,7 +49,7 @@ High: (5 total)
      Alternatively, compute a 1D spline?
    - use unboxed vectors where possible in the rasterization algorithm
    - possibly try to update only pixels whose values change in each layer?
-   - Get rid of MSAA antialiasing, it adds about 20%-25% to code run time with very little benefit.
+   - Get rid of MSAA antialiasing, it adds about 20%-25% to code run time with very little benefit. (DONE)
    - Related to previous point, perhaps improve the heuristic AA to minimize any loss in quality
 Medium: (9 total)
 1. Refactor the Path/Contour/ClosedPath abstraction. 
@@ -75,7 +75,8 @@ Medium: (9 total)
    rational beziers/nurbs, and allow computation of their bounding boxes 
 8. Add arc length/arc length parametrization of paths.
    (to implement stuff like dashing strokes and drawing markers etc)
-9. Add simple plotting engine
+   (Computed exactly for quadratic Beziers. Adding approximation for Rational and or cubic beziers)
+9. Add simple plotting engine (DONE)
 Low: (10 total)
 1. Write functions to generate paths out of primitives.
    E.g. makeRoundRect Stuff -> Contour
@@ -91,13 +92,13 @@ Low: (10 total)
    gradient). Thus the scan rasterizer could rasterize such a contour. Need to be careful with how we define
    orientation, but I think it could work. This would be a solution to 2 above, as well as being sooooo much
    more general. Could do soooo much cool shit with this. 
-6. Related to 18. Add general parametric paths which are polynomial in y. Like fun fact, the scan rasterizer
+6. Related to ?. Add general parametric paths which are polynomial in y. Like fun fact, the scan rasterizer
    doesn't give a shit what x is doing as long as we can solve for y, and take appropriate derivatives.
 7. Possibly remove nonrational Bezier curves/NUBS in favor of rational Beziers/NURBS, might have to look into
    whether/how much of a performance differnce there is/might be. See 20.
 8. Add SVG loading/rendering
 9. Glitch when stroking sharp interior bends, see Q with a stroke distance of 40.
-10. Never compare floats for equality. Pretty urgent. This is a huge source of bugs. Just fixed one in the 
+10. Never compare floats for equality. This is a huge source of bugs. Just fixed one in the 
     build join function causing massive streaking and glitching. (Mostly done)
 Don't do now:
 1. Consider adding circular/elliptical contours as standalone contours not built out of path segments.

@@ -57,6 +57,14 @@ data PlotGeom = PlotGeom
   , plotBaseStrokeWidth :: Double -- width of major axes and graphs
   }
 
+{-
+data GeometrySpec :: GeomSpec
+  { defaultArea :: Box
+  , expansionRatio :: Maybe Double
+  , axisSepRatio 
+  }
+-}
+
 data Plot = Plot
   { plotGeom :: PlotGeom
   , bgColor :: Maybe LRGBA
