@@ -109,19 +109,26 @@ class Pointlike a where
 
 
 -- | class synonym 'AbGroup' to denote an abelian group type
-class (Summable a a a, Zeroable a, Negatable a, Subtractable a a a) => AbGroup a where
-instance (Summable a a a, Zeroable a, Negatable a, Subtractable a a a) => AbGroup a where
+type AbGroup a = (Summable a a a, Zeroable a, Negatable a, Subtractable a a a)
 
 -- | class synonym 'Vector' to denote a vector type
-class (Multiplicable Double a a, AbGroup a) => Vectorlike a where
-instance (Multiplicable Double a a, AbGroup a) => Vectorlike a where
+type Vectorlike a = (AbGroup a, Multiplicable Double a a)
 
 -- | class synonym to denote types that will behave ok in a Polynomial situation
 class (Vectorlike a, Summable a b b, Subtractable b b a, Subtractable b a b, Pointlike b) =>
   Polynomializable a b | b -> a where
 
+class (Vectorlike (D a), Summable (D a) a a, Subtractable a a (D a), Subtractable a (D a) a, Pointlike a) =>
+  Differentiable a where
+  type D a :: *
+  type D a = a
+
+--instance Polynomializable a b => Differentiable b where
+--  type D b = a
+
 instance Pointlike Double where
 instance Polynomializable Double Double where
+instance Differentiable Double where
 
 instance Summable Double Double Double where 
   (+.) = (+)
@@ -134,4 +141,49 @@ instance Negatable Double where
   negify = negate
 instance Zeroable Double where
 instance Unitable Double where
+
+
+
+
+instance (Summable a c e, Summable b d f) => Summable (a,b) (c,d) (e,f) where
+  (+.) (a1,a0) (b1,b0) = (a1+.b1,a0+.b0)
+instance (Subtractable a c e, Subtractable b d f) =>
+    Subtractable (a,b) (c,d) (e,f) where
+  (-.) (a1,a0) (b1,b0) = (a1-.b1,a0-.b0)
+instance (Multiplicable c a a, Multiplicable c b b) => 
+    Multiplicable c (a,b) (a, b) where
+  (*.) x (a1,a0) = (x*.a1,x*.a0)
+instance (Negatable a, Negatable b) => Negatable (a,b) where
+  negify (a1,a0) = (negify a1,negify a0)
+instance (Zeroable a, Zeroable b) => Zeroable (a,b) where
+  zero = (zero,zero)
+instance (Summable a b c, Summable d e f, Summable g h i) => 
+    Summable (a,d,g) (b,e,h) (c,f,i) where
+  (+.) (a2,a1,a0) (b2,b1,b0) = (a2+.b2,a1+.b1,a0+.b0)
+instance (Subtractable a b c, Subtractable d e f, Subtractable g h i) =>
+    Subtractable (a,d,g) (b,e,h) (c,f,i) where
+  (-.) (a2,a1,a0) (b2,b1,b0) = (a2-.b2,a1-.b1,a0-.b0)
+instance (Multiplicable d a a, Multiplicable d b b, Multiplicable d c c) => 
+    Multiplicable d (a,b,c) (a,b,c) where
+  (*.) x (a2,a1,a0) = (x*.a2,x*.a1,x*.a0)
+instance (Negatable a, Negatable b, Negatable c) => Negatable (a,b,c) where
+  negify (a2,a1,a0) = (negify a2,negify a1,negify a0)
+instance (Zeroable a, Zeroable b, Zeroable c) => Zeroable (a,b,c) where
+  zero = (zero,zero,zero)
+instance (Summable a b c, Summable d e f, Summable g h i, Summable j k l) => 
+    Summable (a,d,g,j) (b,e,h,k) (c,f,i,l) where
+  (+.) (a3,a2,a1,a0) (b3,b2,b1,b0) = (a3+.b3,a2+.b2,a1+.b1,a0+.b0)
+instance (Subtractable a b c, Subtractable d e f, Subtractable g h i, Subtractable j k l) =>
+    Subtractable (a,d,g,j) (b,e,h,k) (c,f,i,l) where
+  (-.) (a3,a2,a1,a0) (b3,b2,b1,b0) = (a3-.b3,a2-.b2,a1-.b1,a0-.b0)
+instance (Multiplicable e a a, Multiplicable e b b, Multiplicable e c c, Multiplicable e d d) => 
+    Multiplicable e (a,b,c,d) (a,b,c,d) where
+  (*.) x (a3,a2,a1,a0) = (x*.a3,x*.a2,x*.a1,x*.a0)
+instance (Negatable a, Negatable b, Negatable c, Negatable d) => Negatable (a,b,c,d) where
+  negify (a3,a2,a1,a0) = (negify a3,negify a2,negify a1,negify a0)
+instance (Zeroable a, Zeroable b, Zeroable c, Zeroable d) => Zeroable (a,b,c,d) where
+  zero = (zero,zero,zero,zero)
+
+--instance Pointlike 
+
 

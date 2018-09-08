@@ -38,6 +38,7 @@ dependencies:
 #- bytestring
 #- binary
 - FontyFruity
+- constrained-categories
 - tasty # for unit tests
 - criterion # for benchmarks
 - linear # for low dimensional linear algebra. For now only using it for 4D vectors, but if it is faster,
@@ -85,6 +86,7 @@ default-extensions:
 - QuasiQuotes
 - GeneralizedNewtypeDeriving
 - DefaultSignatures
+- ConstraintKinds
 #- OverloadedLists
 
 library:

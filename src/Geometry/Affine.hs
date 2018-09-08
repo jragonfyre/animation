@@ -156,6 +156,7 @@ instance Pointlike Matrix where
 --instance Pointlike Affine where
 
 instance Polynomializable Vector Vector where
+instance Differentiable Vector where
 
 instance Pointlike Point where
   affineCombo pt (t,opt) = line pt opt t
@@ -166,6 +167,11 @@ instance Pointlike Point where
   -- oh well, this works for now.
 
 instance Polynomializable Vector Point where
+instance Differentiable Point where
+  type D Point = Vector
+
+instance Polynomializable Matrix Matrix where
+instance Differentiable Matrix where
 
 instance Geometric Vector where
   transform = (*.)

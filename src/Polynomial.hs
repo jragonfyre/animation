@@ -29,6 +29,14 @@ type CubPoly = CubicPoly Double Double
 -- | Type synonym for a cubic polynomial generalized
 type CubicPoly a b = (a,a,a,b)
 
+instance (Zeroable a, Unitable b) => Unitable (LinearPoly a b) where
+  unit = (zero,unit)
+instance (Zeroable a, Unitable b) => Unitable (QuadraticPoly a b) where
+  unit = (zero,zero,unit)
+instance (Zeroable a, Unitable b) => Unitable (CubicPoly a b) where
+  unit = (zero,zero,zero,unit)
+
+{-
 
 instance (Summable a c e, Summable b d f) => Summable (LinearPoly a b) (LinearPoly c d) (LinearPoly e f) where
   (+.) (a1,a0) (b1,b0) = (a1+.b1,a0+.b0)
@@ -74,6 +82,10 @@ instance (Zeroable a, Zeroable b) => Zeroable (CubicPoly a b) where
   zero = (zero,zero,zero,zero)
 instance (Zeroable a, Unitable b) => Unitable (CubicPoly a b) where
   unit = (zero,zero,zero,unit)
+
+-}
+
+
 
 -- | Evaluates a linear polynomial at a point 't' using Horner's method.
 --

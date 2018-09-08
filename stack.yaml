@@ -51,6 +51,7 @@ extra-deps:
 - dual-tree-0.2.1
 - lens-4.15.4
 - free-4.12.4
+- constrained-categories-0.3.1.0
 
 
 # Override default flag values for local packages and extra-deps

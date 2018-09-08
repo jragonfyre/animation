@@ -11,7 +11,7 @@ module Rasterizer
   ) where
 
 import qualified Data.Array.Repa as R
-import Data.Array.Repa (D, DIM2, Array, (:.) (..), Z(..), fromFunction, ix2, (!), ix1, Source, Structured (..))
+import Data.Array.Repa (DIM2, Array, (:.) (..), Z(..), fromFunction, ix2, (!), ix1, Source, Structured (..))
 --import Data.Array.Repa.Repr.Vector as R
 
 import qualified Data.Vector as V
@@ -71,7 +71,7 @@ plusStencil = makeStencil2 21 21
         else
           Nothing
 
-plusAntialias :: (Source t Double) => Raster t Double -> Raster D Double 
+plusAntialias :: (Source t Double) => Raster t Double -> Raster R.D Double 
 plusAntialias raster = 
   let
     smoothed = 
@@ -102,7 +102,7 @@ gaussian2 =
              0  0  1   2  1  0 0 |]
 gaussian2Weight = 1003
 
-stencilAntialias :: (Source t Double) => Stencil DIM2 Double -> Double -> Raster t Double -> Raster D Double
+stencilAntialias :: (Source t Double) => Stencil DIM2 Double -> Double -> Raster t Double -> Raster R.D Double
 stencilAntialias stencil weight raster = 
   let
     smoothed = 
@@ -113,22 +113,22 @@ stencilAntialias stencil weight raster =
   in 
     R.zipWith (\o n -> if 0 < o && o < 1 then n/weight else o) raster smoothed
 
-stencilAABlur :: (Source t Double) => Stencil DIM2 Double -> Double -> Raster t Double -> Raster D Double
+stencilAABlur :: (Source t Double) => Stencil DIM2 Double -> Double -> Raster t Double -> Raster R.D Double
 stencilAABlur stencil weight raster = R.delay . smap (/weight) $ mapStencil2 BoundClamp stencil raster
 
-gaussian1Antialias :: (Source t Double) => Raster t Double -> Raster D Double
+gaussian1Antialias :: (Source t Double) => Raster t Double -> Raster R.D Double
 gaussian1Antialias = stencilAntialias gaussian1 gaussian1Weight
 
-gaussian2Antialias :: (Source t Double) => Raster t Double -> Raster D Double
+gaussian2Antialias :: (Source t Double) => Raster t Double -> Raster R.D Double
 gaussian2Antialias = stencilAntialias gaussian2 gaussian2Weight
 
---gaussianFilter :: Int -> Double -> Array D DIM2 
+--gaussianFilter :: Int -> Double -> Array R.D DIM2 
 
 signSqrt :: Double -> Double
 signSqrt x | x >= 0 = sqrt x
            | otherwise = -(sqrt (-x))
 
-rasterizeCircle :: (Int, Int) -> Box -> Circle -> Raster D Double 
+rasterizeCircle :: (Int, Int) -> Box -> Circle -> Raster R.D Double 
 rasterizeCircle (nx,ny) box circ = 
   let 
     (center,radius) = circ^.circAsPair
@@ -164,7 +164,7 @@ rasterizeCircle (nx,ny) box circ =
 
 
 {-
-rasterizeConvex :: (Int, Int) -> Box -> ConvexPolytope -> Raster D Double
+rasterizeConvex :: (Int, Int) -> Box -> ConvexPolytope -> Raster R.D Double
 rasterizeConvex (nx,ny) box cp =
   let
     (width,height) = box^.dimensions.vecAsPair
@@ -218,7 +218,7 @@ keepFirst ps tol ((t1@(i,(x1,(s1,_)))):(t2@(j,(x2,(s2,_)))):xs) =
     else
       t1:(keepFirst ps tol (t2:xs))
 
-scanRasterizerNoAA :: (Int,Int) -> Box -> ClosedPath -> IO (Raster D Double)
+scanRasterizerNoAA :: (Int,Int) -> Box -> ClosedPath -> IO (Raster R.D Double)
 scanRasterizerNoAA (nx,ny) box cp =
   let 
     bt=boxTop box
@@ -331,7 +331,7 @@ scanRasterizerNoAA (nx,ny) box cp =
 
 -- need to switch to accelerate to get a proper speedup :/
 -- maybe?
-scanRasterizer :: (Int,Int) -> Box -> ClosedPath -> IO (Raster D Double)
+scanRasterizer :: (Int,Int) -> Box -> ClosedPath -> IO (Raster R.D Double)
 scanRasterizer (nx,ny) box cp =
   let 
     bt=boxTop box
@@ -513,12 +513,12 @@ pixelAlignedBoundingBox (nx,ny) bigBox boundBox =
 type Rasterizer r t = (Int,Int) -> Box -> r -> Raster t Double
 type MRasterizer r t m = (Int,Int) -> Box -> r -> m (Raster t Double)
 
-background :: (Int,Int) -> Raster D LRGBA
+background :: (Int,Int) -> Raster R.D LRGBA
 background (nx,ny) = fromFunction (ix2 nx ny) (const invisible)
 
 type Compositor = LRGBA -> LRGBA -> LRGBA
 
-render :: (Source r LRGBA, Source t Double) => Raster r LRGBA -> Compositor -> (Int,Int) -> Box -> a -> Fill -> Rasterizer a t -> Raster D LRGBA
+render :: (Source r LRGBA, Source t Double) => Raster r LRGBA -> Compositor -> (Int,Int) -> Box -> a -> Fill -> Rasterizer a t -> Raster R.D LRGBA
 render bg comp sz@(nx,ny) box reg fill rasterizer = 
   let
     (width,height) = box^.dimensions.vecAsPair
@@ -534,7 +534,7 @@ render bg comp sz@(nx,ny) box reg fill rasterizer =
           (\lkup ix -> ((lkup ix)*.) . fill . centIxLoc $ ix)
 
 mrender :: (Source r LRGBA, Source t Double, Monad m,GBounded a, MonadIO m) =>
-  Raster r LRGBA -> Compositor -> (Int,Int) -> Box -> a -> Fill -> MRasterizer a t m -> m (Raster D LRGBA)
+  Raster r LRGBA -> Compositor -> (Int,Int) -> Box -> a -> Fill -> MRasterizer a t m -> m (Raster R.D LRGBA)
 mrender bg comp sz@(nx,ny) box reg fill rasterizer = 
   let
     bbox = bounds reg
@@ -626,13 +626,13 @@ data Rasterizable t where
 data MRasterizable t m where
   MRasterizable :: (GBounded a) => a -> Fill -> MRasterizer a t m -> Compositor -> MRasterizable t m
 
-delayRasterizer :: (Source t Double) => Rasterizer a t -> Rasterizer a D
+delayRasterizer :: (Source t Double) => Rasterizer a t -> Rasterizer a R.D
 delayRasterizer rsteriz sz bx r = R.delay $ rsteriz sz bx r
 
-delayRaster :: Source t Double => Rasterizable t -> Rasterizable D
+delayRaster :: Source t Double => Rasterizable t -> Rasterizable R.D
 delayRaster (Rasterizable x f r c) = Rasterizable x f (delayRasterizer r) c
 
-renderLayered :: (Int,Int) -> Box -> [Rasterizable D] -> Raster D LRGBA
+renderLayered :: (Int,Int) -> Box -> [Rasterizable R.D] -> Raster R.D LRGBA
 renderLayered sz _ [] = background sz
 renderLayered sz box ((Rasterizable reg fill rast comp):lls) = 
   let 
@@ -640,13 +640,13 @@ renderLayered sz box ((Rasterizable reg fill rast comp):lls) =
   in
     render lflat comp sz box reg fill rast 
 
-mRenderLayered :: (Monad m, MonadIO m) => (Int,Int) -> Box -> [MRasterizable D m] -> m (Raster D LRGBA)
+mRenderLayered :: (Monad m, MonadIO m) => (Int,Int) -> Box -> [MRasterizable R.D m] -> m (Raster R.D LRGBA)
 mRenderLayered sz _ [] = return $ background sz
 mRenderLayered sz box ((MRasterizable reg fill rast comp):lls) = do
   lflat <- mRenderLayered sz box lls 
   mrender lflat comp sz box reg fill rast 
 
-renderPicture :: (Int,Int) -> Box -> Picture -> IO (Raster D LRGBA)
+renderPicture :: (Int,Int) -> Box -> Picture -> IO (Raster R.D LRGBA)
 renderPicture sz bx spics = 
   mRenderLayered
     sz
@@ -657,7 +657,7 @@ renderPicture sz bx spics =
       )
       spics
 
-renderPictureNoAA :: (Int,Int) -> Box -> Picture -> IO (Raster D LRGBA)
+renderPictureNoAA :: (Int,Int) -> Box -> Picture -> IO (Raster R.D LRGBA)
 renderPictureNoAA sz bx spics = 
   mRenderLayered
     sz
@@ -674,7 +674,7 @@ toPixel (LRGBA r g b _) = I.PixelRGB r g b
 gammaCorrect :: I.Pixel RGB Double -> I.Pixel RGB Double
 gammaCorrect = fmap (** (1/2.2))
 
-convertToImage :: Raster D LRGBA -> Image RPU RGB Double
+convertToImage :: Raster R.D LRGBA -> Image RPU RGB Double
 convertToImage raster =
   fromRepaArrayP $ R.map (gammaCorrect . toPixel) $ R.transpose raster 
 
@@ -692,12 +692,12 @@ circ3 = ((0.26,0)^.from ptAsPair,0.7)^.from circAsPair
 
 circs = [circ1, circ2, circ3]
 
-purpleQ :: [MRasterizable D IO]
+purpleQ :: [MRasterizable R.D IO]
 purpleQ = [MRasterizable glyphQ mpurple scanRasterizer mappend]
 
 
 {-
-testLayers :: [Rasterizable D]
+testLayers :: [Rasterizable R.D]
 testLayers = zipWith4 (Rasterizable) 
   (circs ++ circs) 
   [orange,purple,grey,red,green,blue] 

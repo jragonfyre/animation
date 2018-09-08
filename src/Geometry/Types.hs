@@ -21,13 +21,15 @@ import Control.Lens.Each
 import Control.Lens.Fold (folding)
 import Control.Lens.Iso (iso)
 
-
+import Paired
 
 --Lens version of Point
 data Point = Point 
   { _pointX, _pointY :: !Double
   }
   deriving (Show, Read, Eq, Ord, Generic)
+
+makeFields ''Point
 
 makePoint :: Double -> Double -> Point
 makePoint = Point
@@ -38,7 +40,11 @@ ptToPair Point{_pointX=x,_pointY=y} = (x,y)
 ptFromPair :: (Double,Double) -> Point
 ptFromPair = uncurry makePoint
 
-makeFields ''Point
+instance Paired Point where
+  type TLf Point = Double
+  type TRt Point = Double
+  toPair = ptToPair
+  fromPair = ptFromPair
 
 -- ptAsPair :: Iso' Point (Double, Double)
 ptAsPair :: (Functor f, Profunctor p) => 
@@ -66,6 +72,13 @@ vecToPair Vector{_vectorX=x,_vectorY=y} = (x,y)
 vecFromPair :: (Double,Double) -> Vector
 vecFromPair = uncurry makeVector
 
+instance Paired Vector where
+  type TLf Vector = Double
+  type TRt Vector = Double
+  toPair = vecToPair
+  fromPair = vecFromPair
+
+
 makeFields ''Vector
 
 instance Each Vector Vector Double Double where
@@ -88,6 +101,13 @@ covecToPair = vecToPair . _covectorDual
 
 covecFromPair :: (Double,Double) -> Covector
 covecFromPair = uncurry makeCovector
+
+instance Paired Covector where
+  type TLf Covector = Double
+  type TRt Covector = Double
+  toPair = covecToPair
+  fromPair = covecFromPair
+
 
 makeFields ''Covector
 
@@ -119,6 +139,12 @@ matToPair Matrix{_matrixX=x,_matrixY=y} = (x,y)
 
 matFromPair :: (Vector,Vector) -> Matrix
 matFromPair = uncurry makeMatrix
+
+instance Paired Matrix where
+  type TLf Matrix = Vector
+  type TRt Matrix = Vector
+  toPair = matToPair
+  fromPair = matFromPair
 
 -- matAsPair :: Iso' Matrix (Vector, Vector)
 matAsPair :: (Functor f, Profunctor p) => 
@@ -159,6 +185,12 @@ affToPair Affine{_affineLinear=x,_affineTranslation=y} = (x,y)
 affFromPair :: (Matrix,Vector) -> Affine
 affFromPair = uncurry makeAffine
 
+instance Paired Affine where
+  type TLf Affine = Matrix
+  type TRt Affine = Vector
+  toPair = affToPair
+  fromPair = affFromPair
+
 makeFields ''Affine
 
 -- affAsPair :: Iso' Affine (Matrix, Vector)
@@ -182,6 +214,12 @@ segToPair Segment{_segmentStart=x,_segmentEnd=y} = (x,y)
 
 segFromPair :: (Point,Point) -> Segment
 segFromPair = uncurry makeSegment
+
+instance Paired Segment where
+  type TLf Segment = Point
+  type TRt Segment = Point
+  toPair = segToPair
+  fromPair = segFromPair
 
 makeFields ''Segment
 
@@ -213,6 +251,12 @@ circToPair c = (c ^. center, c^. radius)
 
 circFromPair :: (Point,Double) -> Circle
 circFromPair = uncurry makeCircle
+
+instance Paired Circle where
+  type TLf Circle = Point
+  type TRt Circle = Double
+  toPair = circToPair
+  fromPair = circFromPair
 
 circAsPair :: Iso' Circle (Point, Double)
 circAsPair = iso circToPair circFromPair
@@ -260,6 +304,12 @@ hpToPair hp = (hp ^. normal, hp ^. radius)
 
 hpFromPair :: (Vector, Double) -> HalfPlane
 hpFromPair = uncurry makeHalfPlane
+
+instance Paired HalfPlane where
+  type TLf HalfPlane = Vector
+  type TRt HalfPlane = Double
+  toPair = hpToPair
+  fromPair = hpFromPair
 
 hpAsPair :: Iso' HalfPlane (Vector, Double)
 hpAsPair = iso hpToPair hpFromPair

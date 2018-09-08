@@ -16,26 +16,13 @@ import Geometry.Path
 import Control.Lens
 import Control.Lens.TH
 
+
+--import Prelude hiding ((.),id)
+
 import qualified Data.Vector as V
 
 
-{-
-class Differentiable a b | a -> b where
-instance Differentiable Point Vector where
-instance Differentiable Vector Vector where
-instance Differentiable Double Double where
-
-type Function0 a = a -> a
-
-data Function1 a b c = Function1
-  { _function1Func :: a -> b
-  , _function1Deriv :: a -> (c -> c)
-  }
-
-makeFields ''Function1
-
-composeF1 :: Function1 a b c d -> Function1 c d e f
--}
+--type Function0 a = a -> a
 
 data ParamPath0 = ParamPath0
   { _paramPath0Func :: Double -> Point
