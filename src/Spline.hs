@@ -1,3 +1,4 @@
+{-# LANGUAGE UndecidableInstances #-}
 --
 -- Spline.hs
 -- Copyright (C) 2018 jragonfyre <jragonfyre@jragonfyre>
@@ -184,6 +185,11 @@ evaluateHSpline hspline t =
         in
           evalCubic ((intFs hspline)!(i-1)) t
 
+instance (Polynomializable a b) => EvaluatableClass (HSplineG a b) where
+  type Domain (HSplineG a b) c = (c~Double)
+  type Codomain (HSplineG a b) c = b
+  evaluate = evaluateHSpline
+
 -- | probably not useful for two dimensional functions
 interpolateDifferentiable :: Polynomializable a b => 
   (Double -> b, Double -> a) -> Vector Double -> HSplineG a b
@@ -197,5 +203,9 @@ interpolateDifferentiableEvenly fs (s,e) st =
     ts = V.fromList (nub $ (fmap ((*st) . fromIntegral) [0..lpt]) ++ [e])
   in
     interpolateDifferentiable fs ts
+
+
+--buildAntialiasingSpline :: Double -> [(Double,Double)] -> HSpline
+--buildAntialiasingSpline 
 
 

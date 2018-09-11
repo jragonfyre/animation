@@ -20,30 +20,41 @@ import Paired
 import Prelude hiding ((.),id,uncurry)
 
 data DFunction a b where
-  DFunction :: (Differentiable a, Differentiable b) => (a -> b) -> (a -> (D a -> D b)) -> DFunction a b
+  DFunction :: (Differentiable a, Differentiable b, Linear (D a) m (D b)) => (a -> b) -> (a -> m) -> DFunction a b
 
 --makeFields ''DFunction
 
 function :: Lens' (DFunction a b) (a -> b)
 function = lens (\(DFunction f _) -> f) (\(DFunction _ df) nf -> DFunction nf df)
 
-dFunction :: Lens' (DFunction a b) (a -> (D a -> D b))
+dFunction :: Lens' (DFunction a b) (a -> LinearMap (D a) (D b))
 dFunction = lens (\(DFunction _ df) -> df) (\(DFunction f _) nf -> DFunction f nf)
 
-evaluate :: DFunction a b -> a -> b
-evaluate (DFunction f _) = f
+instance EvaluatableClass (DFunction a b) where
+  type Domain (DFunction a b) c = (a~c)
+  type Codomain (DFunction a b) c = b
+  evaluate (DFunction f _) = f
 
-derivative :: DFunction a b -> a -> (D a -> D b)
+--evaluate :: DFunction a b -> a -> b
+--evaluate (DFunction f _) = f
+
+derivative :: DFunction a b -> a -> (LinearMap (D a) (D b))
 derivative (DFunction _ df) = df
 
 gradient :: DFunction Double b -> Double -> D b
-gradient (DFunction _ df) = flip df 1
+gradient (DFunction _ df) = df
 
+{-
 idF1 :: (Differentiable a) => DFunction a a
 idF1 = DFunction id $ const id
+-}
 
-composeF1 :: (Differentiable a, Differentiable c, Differentiable e) =>
-  DFunction c e -> DFunction a c -> DFunction a e
+composeF1 :: ( Differentiable a
+             , Differentiable c
+             , Differentiable e
+             , Multiplicable (LinearMap (D c) (D e)) (LinearMap (D a) (D c)) (LinearMap (D a) (D e))
+             , LinearFromTo (D a) (D e)
+             ) => DFunction c e -> DFunction a c -> DFunction a e
 composeF1 fn2 fn1 = 
   let
     f1 = fn1^.function
@@ -53,20 +64,20 @@ composeF1 fn2 fn1 =
   in
     DFunction
       (f2 . f1)
-      (\t -> (f2p . f1 $ t) . (f1p t))
+      (\t-> (f2p . f1 $ t) *. (f1p t))
 
-
-
+{-
 instance Category DFunction where
   type Object DFunction a = (Differentiable a)
   (.) = composeF1
   id = idF1
+-}
 
 sinD :: DFunction Double Double
-sinD = DFunction sin (\t -> ((cos t)*))
+sinD = DFunction sin cos
 
 cosD :: DFunction Double Double
-cosD = DFunction cos (\t -> negate . ((sin t)*))
+cosD = DFunction cos (negate . sin)
 
 type PairedDifferentiable b = 
   ( Paired b
@@ -78,15 +89,22 @@ type PairedDifferentiable b =
   , TRt (D b) ~ D (TRt b)
   )
 
+{-
 toPairD :: PairedDifferentiable b => DFunction b (TLf b, TRt b)
 toPairD = DFunction toPair (const toPair)
+-}
 
+{-
 fstD :: (Differentiable b, Differentiable c) => DFunction (b,c) b
 fstD = DFunction fst (const fst)
+-}
 
+{-
 sndD :: (Differentiable b, Differentiable c) => DFunction (b,c) c
 sndD = DFunction snd (const snd)
+-}
 
+{-
 instance ( PairedDifferentiable b
          , Differentiable a
          ) => Paired (DFunction a b) where
@@ -97,11 +115,15 @@ instance ( PairedDifferentiable b
     DFunction
       (\t -> fromPair (f t, g t))
       (\t dt -> fromPair (df t dt, dg t dt))
+-}
 
+{-
 sumD :: (Differentiable a, Differentiable b, Differentiable c, Summable a b c, Summable (D a) (D b) (D c))
   => DFunction (a,b) c
 sumD = DFunction (uncurry (+.)) (const (uncurry (+.)))
+-}
 
+{-
 productD :: ( Differentiable a
             , Differentiable b
             , Differentiable c
@@ -110,5 +132,5 @@ productD :: ( Differentiable a
             , Multiplicable (D a) b (D c)
             ) => DFunction (a,b) c
 productD = DFunction (uncurry (*.)) (\(a,b) (da,db) -> (a*.db +. da*.b))
-
+-}
 

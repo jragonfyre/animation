@@ -1,0 +1,3 @@
+[submodule "constrained-categories"]
+	path = constrained-categories
+	url = ./constrained-categories/

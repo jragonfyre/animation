@@ -28,9 +28,12 @@ invisible = LRGBA 0 0 0 0
 compose :: LRGBA -> LRGBA -> LRGBA
 compose (LRGBA r g b a) (LRGBA x y z w) = LRGBA (r+(1-a)*x) (g+(1-a)*y) (b+(1-a)*z) (a+w-a*w)
 
+instance Semigroup LRGBA where
+  (<>) = compose
+
 instance Monoid LRGBA where
   mempty = invisible
-  mappend = compose
+  mappend = (<>)
 
 instance Summable LRGBA LRGBA LRGBA where
   (+.) (LRGBA r g b a) (LRGBA x y z w) = LRGBA (r+x) (g+y) (b+z) (a+w)

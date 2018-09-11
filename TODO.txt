@@ -51,7 +51,7 @@ High: (5 total)
    - possibly try to update only pixels whose values change in each layer?
    - Get rid of MSAA antialiasing, it adds about 20%-25% to code run time with very little benefit. (DONE)
    - Related to previous point, perhaps improve the heuristic AA to minimize any loss in quality
-6. Switch everything stuff over to DFunctions
+6. Switch everything over to DFunctions
 7. Create Evaluatable typeclass
 Medium: (9 total)
 1. Refactor the Path/Contour/ClosedPath abstraction. 

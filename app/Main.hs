@@ -6,6 +6,11 @@ import Stroke
 import Picture
 import Font
 import Plot
+import Polynomial
+import MathClasses
+import Vector
+import qualified Data.Vector.Sized as V
+import qualified Data.Maybe as M
 import Graphics.Text.TrueType (loadFontFile)
 import qualified Graphics.Image as I
 import Graphics.Image (RPU,RGB,Image)
@@ -382,8 +387,18 @@ concreteAnim = spiroAnim 150
       (LRGBA 0 0 0 0.75)
   )
 
+tPoly :: QuadPoly
+tPoly = (1,2,3)
+
+testT :: Double
+testT = 2
+
 main :: IO ()
 main = do
+  putStrLn "Test"
+  putStrLn $ show (tPoly $. testT)
+  putStrLn "Test2"
+  {-
   let
     ppic 
       = plotPicture 
@@ -408,6 +423,19 @@ main = do
             (0,2*pi)
             0.01
         ]
+  -}
+  let 
+    mat1 = generateMat @2 @2 (\i j -> flip V.index (linearIndex i j) . M.fromJust $ V.fromList @4 [1::Double,2,3,4])
+    mat2 = ((1,2),(3,4))^.from matAsComponents
+    vec1 = M.fromJust $ V.fromList @2 [1::Double,2]
+    vec2 = makeVector 1 2
+  defaultMain
+    [ bgroup
+        "Linear-alg-testing"
+        [ bench "fixed, Vectors" . nf ((mat2*.)::Vector -> Vector) $ vec2
+        , bench "variable, V.Vector 2" . nf ((mat1*.)::V.Vector 2 Double -> V.Vector 2 Double) $ vec1
+        ]
+    ]
   {-
   defaultMain
     [ bgroup
@@ -446,7 +474,7 @@ main = do
       --writeString 1000 ft "Hello World!" (\pt -> LRGBA ((sin ((pt^.x)/100))^2) ((cos ((pt^. x)/101))^2) 0.3 1.0)
       --writeString 1000 ft "Hiu bebisar!" (\pt -> LRGBA ((sin ((pt^.x)/100))^2) ((cos ((pt^. x)/101))^2) 0.3 1.0)
       return ()
-  writePictureNoAA 2000 "penguin" penguin
+  --writePictureNoAA 2000 "penguin" penguin
   {-
   writePicture 1000 "spirograph-test" 
     $ spiroPicture 

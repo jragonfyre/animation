@@ -258,13 +258,25 @@ toPathSpec (WPathEArc earc) =
     , (parametrizeEArc earc 1)
     )
 
-evaluate :: WholePathSegment -> Double -> Point
-evaluate (WPathSeg seg) = segmentParametrization seg
-evaluate (WPathBez2 bez) = parametrization2 bez
-evaluate (WPathBez3 bez) = parametrization3 bez
-evaluate (WPathRBez2 rbez) = rparametrization2 rbez
-evaluate (WPathRBez3 rbez) = rparametrization3 rbez
-evaluate (WPathEArc earc) = parametrizeEArc earc
+
+instance EvaluatableClass WholePathSegment where
+  type Domain WholePathSegment c = (c~Double)
+  type Codomain WholePathSegment c = Point
+  evaluate = evaluateWPSeg
+
+evaluateWPSeg :: WholePathSegment -> Double -> Point
+evaluateWPSeg (WPathSeg seg) = segmentParametrization seg
+evaluateWPSeg (WPathBez2 bez) = parametrization2 bez
+evaluateWPSeg (WPathBez3 bez) = parametrization3 bez
+evaluateWPSeg (WPathRBez2 rbez) = rparametrization2 rbez
+evaluateWPSeg (WPathRBez3 rbez) = rparametrization3 rbez
+evaluateWPSeg (WPathEArc earc) = parametrizeEArc earc
+
+--newtype DerivOf = DerivOf WholePathSegment
+
+--instance EvaluatableClass DerivOf where
+--  type Domain DerivOf c = (c~Double)
+--  type Codomain DerivOf 
 
 derivative :: WholePathSegment -> Double -> T.Vector
 derivative (WPathSeg seg) _ = 

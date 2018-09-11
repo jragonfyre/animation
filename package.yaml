@@ -20,7 +20,7 @@ extra-source-files:
 description:         Please see the README on Github at <https://github.com/jragonfyre/Animation#readme>
 
 dependencies:
-- base >= 4.7 && < 5
+- base >= 4.7 #&& <= 4.10.1.0
 - containers
 - mtl
 #- array
@@ -47,6 +47,10 @@ dependencies:
               # This will be super helpful, but use only when necessary. FFI calls apparently have a huge cost,
               # which is why we're using linear over hmatrix for low dimensional linear algebra in the first
               # place.
+- ghc-typelits-natnormalise # to normalize type level naturals
+- ghc-typelits-knownnat # to derive knownnat constraints
+- finite-typelits # to get finite domain integers
+- vector-sized >= 1.0.4.0
 
 default-extensions:
 - LambdaCase
@@ -87,6 +91,9 @@ default-extensions:
 - GeneralizedNewtypeDeriving
 - DefaultSignatures
 - ConstraintKinds
+- TypeFamilyDependencies
+- PostfixOperators
+- TypeApplications
 #- OverloadedLists
 
 library:

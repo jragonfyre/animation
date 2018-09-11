@@ -15,7 +15,18 @@ import MathClasses
 -- | Type synonym for a constant polynomial
 type CPoly = ConstantPoly Double Double
 -- | Type synonym for a constant polynomial generalized
-type ConstantPoly a b = b
+newtype ConstantPoly a b = CPoly b
+  deriving (Show,Read,Eq,Ord,Num,Negatable,Zeroable,Unitable,Pointlike)
+instance (Summable a c e, Summable b d f) => 
+  Summable (ConstantPoly a b) (ConstantPoly c d) (ConstantPoly e f) where
+  (+.) (CPoly x) (CPoly y) = CPoly $ x +. y
+instance (Subtractable a c e, Subtractable b d f) => 
+  Subtractable (ConstantPoly a b) (ConstantPoly c d) (ConstantPoly e f) where
+  (-.) (CPoly x) (CPoly y) = CPoly $ x -. y
+instance (Multiplicable Double b b) => Multiplicable Double (ConstantPoly a b) (ConstantPoly a b) where
+  (*.) s (CPoly y) = CPoly $ s*.y
+instance (Multiplicable b Double b) => Multiplicable (ConstantPoly a b) Double (ConstantPoly a b) where
+  (*.) (CPoly y) s = CPoly $ y *. s
 -- | Type synonym for a linear polynomial
 type LinPoly = LinearPoly Double Double
 -- | Type synonym for a linear polynomial generalized
@@ -97,6 +108,28 @@ evalLinearG (a1,a0) t = t*.a1+.a0
 evalLinear :: (Polynomializable a b) => LinearPoly a b -> Double -> b
 evalLinear = evalLinearG
 
+instance EvaluatableClass (ConstantPoly a b) where
+  type Domain (ConstantPoly a b) _ = ()
+  type Codomain (ConstantPoly a b) _ = b
+  evaluate (CPoly v) _ = v
+
+instance Polynomializable a b => EvaluatableClass (LinearPoly a b) where
+  type Domain (LinearPoly a b) c = (Multiplicable c a a)
+  type Codomain (LinearPoly a b) c = b
+  evaluate = evalLinearG
+
+{-
+class DifferentiableMorphism a c d b e | a b -> c d e where
+  differentiate :: ( Evaluatable a c d
+                   , Differentiable c
+                   , Differentiable d
+                   , Evaluatable b c e
+                   , Linear (D c) e (D d)
+                   ) => a -> b
+-}
+instance Polynomializable a b => DifferentiableMorphism (LinearPoly a b) Double b (ConstantPoly a a) a  where
+  differentiate (a1,_) = CPoly a1
+
 -- | Evaluates a quadratic polynomial at a point 't' using Horner's method.
 --   
 --   Cost: Two '*.' and two '+.'
@@ -107,6 +140,14 @@ evalQuadraticG (a2,a1,a0) t = t*.(t*.a2+.a1)+.a0
 evalQuadratic :: (Polynomializable a b) => QuadraticPoly a b -> Double -> b
 evalQuadratic = evalQuadraticG
 
+instance Polynomializable a b => EvaluatableClass (QuadraticPoly a b) where
+  type Domain (QuadraticPoly a b) c = (Multiplicable c a a)
+  type Codomain (QuadraticPoly a b) c = b
+  evaluate = evalQuadraticG
+
+instance Polynomializable a b => DifferentiableMorphism (QuadraticPoly a b) Double b (LinearPoly a a) a where
+  differentiate = derivCoeffsQuadratic --(a2,a1,_) = ((2::Double)*.a2,a1)
+
 -- | Evaluates a cubic polynomial at a point 't' using Horner's method.
 --
 --   Cost: Three '*.' and three '+.'
@@ -116,6 +157,14 @@ evalCubicG (a3,a2,a1,a0) t = t*.(t*.(t*.a3+.a2)+.a1)+.a0
 -- | Synonym for 'evalCubicG' specialized to evaluating at 'Double's
 evalCubic :: (Polynomializable a b) => CubicPoly a b -> Double -> b
 evalCubic = evalCubicG
+
+instance Polynomializable a b => EvaluatableClass (CubicPoly a b) where
+  type Domain (CubicPoly a b) c = (Multiplicable c a a)
+  type Codomain (CubicPoly a b) c = b
+  evaluate = evalCubicG
+
+instance Polynomializable a b => DifferentiableMorphism (CubicPoly a b) Double b (QuadraticPoly a a) a where
+  differentiate = derivCoeffsCubic
 
 -- | Synonym for 'differentiateCubic'. /Deprecated./
 derivCoeffsCubic :: (Polynomializable a b, Polynomializable a a) => CubicPoly a b -> QuadraticPoly a a
@@ -131,6 +180,17 @@ differentiateCubic (a3,a2,a1,_) = ((3::Double)*.a3,(2::Double)*.a2,a1)
 -- | takes a quadratic polynomial and produces it's derivative
 differentiateQuadratic :: (Polynomializable a b, Polynomializable a a) => QuadraticPoly a b -> LinearPoly a a
 differentiateQuadratic (a2,a1,_) = ((2::Double)*.a2,a1)
+
+{-
+instance Polynomializable a b => DifferentiableMorphism (CubicPoly a b) where
+  --type DifferentiableIn a c :: Constraint
+  type DifferentiableIn (CubicPoly a b) c = (c~Double)
+  --type DerivativeOf a c d = b | b -> a c d
+  type DerivativeOf (CubicPoly a b) Double b = (QuadraticPoly a a)
+  --differentiate :: (Evaluatable a c d, DifferentiableIn a c, Differentiable c, Differentiable d) =>
+  --  a -> DerivativeOf a c d
+  --asLinear :: DerivativeOf a c d -> c -> D c -> D d
+-}
 
 -- a cubic polynomial can be specified in several ways (i.e., wrt several bases, and here they are:)
 -- t^3,t^2,t,1 -- the basis used for the functions above

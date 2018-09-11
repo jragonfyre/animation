@@ -1,4 +1,4 @@
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableInstances, UndecidableSuperClasses #-}
 --
 -- MathClasses.hs
 -- Copyright (C) 2018 jragonfyre <jragonfyre@jragonfyre>
@@ -9,6 +9,8 @@
 module MathClasses
   ( module MathClasses
   ) where
+
+import Data.Kind
 
 -- | Class for types implementing a custom addition operator.
 --   Addition should be commutative if the instance is of the form
@@ -107,19 +109,100 @@ class Pointlike a where
       affineComboGenH pt tot opt [] = (1-tot)*.pt +. opt
       affineComboGenH pt tot opt ((t1,pt1):mpts) = affineComboGenH pt (tot+t1) (opt +. t1*.pt1) mpts
 
+-- | Represents a concrete category.
+--   Might need to change the implementation of this, there's kind of a lot of options.
+class EvaluatableClass a where
+  type Domain a b :: Constraint
+  --type Codomain a b c :: Constraint
+  type Codomain a b :: *
+  evaluate :: (Domain a b) => a -> b -> Codomain a b
+
+newtype TaggedFunction a b c where
+  TaggedFunction :: a -> TaggedFunction a b c
+
+instance Evaluatable a b c => EvaluatableClass (TaggedFunction a b c) where
+  type Domain (TaggedFunction a b c) d = (d~b)
+  type Codomain (TaggedFunction a b c) d = c
+  evaluate (TaggedFunction f) = evaluate f
+
+-- | type constraint synonym to represent a linear map from Vectors a to b.
+--   only includes constraints on m. Constraints on a and b must be placed separately
+type Linear a m b = (LinearFromTo a b, m~LinearMap a b)
+
+class (Vectorlike (LinearMap a b), Multiplicable (LinearMap a b) a b) => LinearFromTo a b where
+  type LinearMap a b :: *
+
+instance (Vectorlike b) => LinearFromTo Double b where
+  type LinearMap Double b = b
+
+type Evaluatable a b c = (EvaluatableClass a, Domain a b, c~Codomain a b)
+
+instance EvaluatableClass (a -> b) where
+  type Domain (a -> b) c = (a ~ c)
+  type Codomain (a -> b) a = b
+  evaluate = ($)
+
+infixr 0 $.
+($.) :: (Evaluatable a b c) => a -> b -> c
+($.) = evaluate
+
+newtype DerivOf a = DerivOf a
+
+-- | This is better than before, but still less than ideal
+--   Doesn't work for DFunction for example. Oh well. It at least works for Polynomials well enough for now
+class ( Evaluatable a c d
+      , Differentiable c
+      , Differentiable d
+      , Evaluatable b c e
+      , Linear (D c) e (D d)
+      ) => DifferentiableMorphism a c d b e | a -> b c d e where
+  differentiate :: a -> b
+  --derivative :: a -> c -> e
+  --derivative = evaluate . differentiate
+
+infixl 1 -/. -- differentiate
+(-/.) :: (DifferentiableMorphism a c d b e) => a -> b
+(-/.) = differentiate
+
+infixl 1 $/. -- evaluate derivative
+($/.) :: (DifferentiableMorphism a c d b e) => a -> c -> e
+($/.) f x = (f-/.) $. x
+
+--  THIS IS TERRIBAD. TODO FIX COMPLETELY YIKES! ok uh it's maybe not that bad, but it's still pretty bad.
+--   It's designed this way to allow defining the derivative of a Polynomial to be a Polynomial again, but
+--   it doesn't really support changing the domain of the polynomial to say be matrices or something.
+--class DifferentiableMorphism a where
+  --type DifferentiableIn a c :: Constraint
+  --type DerivativeOf a c d = b | b -> a c d
+  ----differentiate :: (Evaluatable a c d, DifferentiableIn a c, Differentiable c, Differentiable d) =>
+    --a -> DerivativeOf a c d
+  --asLinear :: DerivativeOf a c d -> c -> D c -> D d
+  --differentiate = differentiateTagged . TaggedFunction
+  --differentiateTagged :: TaggedFunction a c d -> b
+
 
 -- | class synonym 'AbGroup' to denote an abelian group type
 type AbGroup a = (Summable a a a, Zeroable a, Negatable a, Subtractable a a a)
 
+-- | class synonym 'Rng' to denote a ring type (possibly without unit)
+type Rng a = (AbGroup a, Multiplicable a a a)
+
+-- | class synonym for a unital ring
+type Ring a = (Rng a, Unitable a)
+
+type Module a b = (Ring a, AbGroup b, Multiplicable a b b)
+
 -- | class synonym 'Vector' to denote a vector type
-type Vectorlike a = (AbGroup a, Multiplicable Double a a)
+type Vectorlike a = (AbGroup a, Multiplicable Double a a, Multiplicable a Double a)
+--type Vectorlike a = (AbGroup a, Multiplicable Double a a, Multiplicable a Double a)
 
 -- | class synonym to denote types that will behave ok in a Polynomial situation
-type Polynomializable a b = (Vectorlike a, Summable a b b, Subtractable b b a, Subtractable b a b, Pointlike b)
+type Polynomializable a b = (Vectorlike a, Summable a b b, Subtractable b b a, Subtractable b a b, Pointlike b, Pointlike a, Differentiable b, (a~(D b)), Differentiable a, (a ~ (D a)))
 --class (Vectorlike a, Summable a b b, Subtractable b b a, Subtractable b a b, Pointlike b) =>
 --  Polynomializable a b | b -> a where
 
-class (Polynomializable (D a) a) =>
+class ( Vectorlike (D a) 
+      ) =>
   Differentiable a where
   type D a :: *
   type D a = a
@@ -143,8 +226,24 @@ instance Negatable Double where
 instance Zeroable Double where
 instance Unitable Double where
 
-
-
+instance Zeroable () where
+  zero = ()
+instance Subtractable () () () where
+  (-.) _ _ = ()
+instance Summable () () () where
+  (+.) _ _ = ()
+instance Multiplicable Double () () where
+  (*.) _ _ = ()
+instance Multiplicable () Double () where
+  (*.) _ _ = ()
+instance Negatable () where
+  negify _ = ()
+instance Unitable () where
+  unit = ()
+instance Pointlike () where
+  affineCombo _ _ = ()
+  affineComboGen _ _ = ()
+instance Differentiable () where
 
 instance (Summable a c e, Summable b d f) => Summable (a,b) (c,d) (e,f) where
   (+.) (a1,a0) (b1,b0) = (a1+.b1,a0+.b0)
@@ -154,6 +253,9 @@ instance (Subtractable a c e, Subtractable b d f) =>
 instance (Multiplicable c a a, Multiplicable c b b) => 
     Multiplicable c (a,b) (a, b) where
   (*.) x (a1,a0) = (x*.a1,x*.a0)
+instance (Multiplicable a Double a, Multiplicable b Double b) => 
+    Multiplicable (a,b) Double (a, b) where
+  (*.) (a1,a0) x = (a1*.x,a0*.x)
 instance (Negatable a, Negatable b) => Negatable (a,b) where
   negify (a1,a0) = (negify a1,negify a0)
 instance (Zeroable a, Zeroable b) => Zeroable (a,b) where
@@ -167,6 +269,9 @@ instance (Subtractable a b c, Subtractable d e f, Subtractable g h i) =>
 instance (Multiplicable d a a, Multiplicable d b b, Multiplicable d c c) => 
     Multiplicable d (a,b,c) (a,b,c) where
   (*.) x (a2,a1,a0) = (x*.a2,x*.a1,x*.a0)
+instance (Multiplicable a Double a, Multiplicable b Double b, Multiplicable c Double c) => 
+    Multiplicable (a,b,c) Double (a,b,c) where
+  (*.) (a2,a1,a0) x = (a2*.x,a1*.x,a0*.x)
 instance (Negatable a, Negatable b, Negatable c) => Negatable (a,b,c) where
   negify (a2,a1,a0) = (negify a2,negify a1,negify a0)
 instance (Zeroable a, Zeroable b, Zeroable c) => Zeroable (a,b,c) where
@@ -180,6 +285,12 @@ instance (Subtractable a b c, Subtractable d e f, Subtractable g h i, Subtractab
 instance (Multiplicable e a a, Multiplicable e b b, Multiplicable e c c, Multiplicable e d d) => 
     Multiplicable e (a,b,c,d) (a,b,c,d) where
   (*.) x (a3,a2,a1,a0) = (x*.a3,x*.a2,x*.a1,x*.a0)
+instance ( Multiplicable a Double a
+         , Multiplicable b Double b
+         , Multiplicable c Double c
+         , Multiplicable d Double d
+         ) => Multiplicable (a,b,c,d) Double (a,b,c,d) where
+  (*.) (a3,a2,a1,a0) x = (a3*.x,a2*.x,a1*.x,a0*.x)
 instance (Negatable a, Negatable b, Negatable c, Negatable d) => Negatable (a,b,c,d) where
   negify (a3,a2,a1,a0) = (negify a3,negify a2,negify a1,negify a0)
 instance (Zeroable a, Zeroable b, Zeroable c, Zeroable d) => Zeroable (a,b,c,d) where

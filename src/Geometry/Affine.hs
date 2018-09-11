@@ -154,6 +154,15 @@ instance Multiplicable Point Vector Double where
 instance Multiplicable Vector Vector Double where 
   (*.) v1 v2 = v1^.x*v2^.x+v1^.y*v2^.y
 
+instance EvaluatableClass Matrix where
+  type Domain Matrix c = (c~Vector)
+  type Codomain Matrix c = Vector
+  evaluate = (*.)
+instance EvaluatableClass Affine where
+  type Domain Affine c = (c~Point)
+  type Codomain Affine c = Point
+  evaluate = (*.)
+
 instance Pointlike Vector where
 instance Pointlike Matrix where
 

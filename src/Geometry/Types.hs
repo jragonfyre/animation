@@ -20,6 +20,7 @@ import Control.Lens.TH
 import Control.Lens.Each
 import Control.Lens.Fold (folding)
 import Control.Lens.Iso (iso)
+import Control.DeepSeq
 
 import Paired
 
@@ -28,6 +29,8 @@ data Point = Point
   { _pointX, _pointY :: !Double
   }
   deriving (Show, Read, Eq, Ord, Generic)
+
+instance NFData Point
 
 makeFields ''Point
 
@@ -63,6 +66,8 @@ data Vector = Vector
   }
   deriving (Show, Read, Eq, Ord, Generic)
 
+instance NFData Vector
+
 makeVector :: Double -> Double -> Vector
 makeVector = Vector
 
@@ -92,6 +97,9 @@ vecAsPair = iso vecToPair vecFromPair
 
 
 newtype Covector = Covector { _covectorDual :: Vector }
+  deriving (Eq,Ord,Show,Read,Generic)
+
+instance NFData Covector
 
 makeCovector :: Double -> Double -> Covector
 makeCovector x y = Covector (makeVector x y)
@@ -130,6 +138,8 @@ data Matrix = Matrix
   { _matrixX, _matrixY :: !Vector
   }
   deriving (Show, Read, Eq, Ord, Generic)
+
+instance NFData Matrix
 
 makeMatrix :: Vector -> Vector -> Matrix
 makeMatrix = Matrix
