@@ -125,15 +125,26 @@ instance Evaluatable a b c => EvaluatableClass (TaggedFunction a b c) where
   type Codomain (TaggedFunction a b c) d = c
   evaluate (TaggedFunction f) = evaluate f
 
+class Composable a b c | a b -> c where
+  infixr 7 <>.
+  (<>.) :: a -> b -> c
+
+{-
 -- | type constraint synonym to represent a linear map from Vectors a to b.
 --   only includes constraints on m. Constraints on a and b must be placed separately
-type Linear a m b = (LinearFromTo a b, m~LinearMap a b)
+type Linear a m b = (LinearFromTo a b, m~(LinearMap a b))
 
 class (Vectorlike (LinearMap a b), Multiplicable (LinearMap a b) a b) => LinearFromTo a b where
   type LinearMap a b :: *
 
 instance (Vectorlike b) => LinearFromTo Double b where
   type LinearMap Double b = b
+-}
+
+type Linear a m b = (LinearFromTo a m b)
+
+type LinearFromTo a m b = (Vectorlike m, Multiplicable m a b)
+
 
 type Evaluatable a b c = (EvaluatableClass a, Domain a b, c~Codomain a b)
 

@@ -37,7 +37,12 @@ resolver: lts-12.9
 # will not be run. This is useful for tweaking upstream packages.
 packages:
 - .
-- constrained-categories
+- location: 
+    #https://github.com/jragonfyre/constrained-categories/commit/7b2636f2c9cf53a4771e277e48e41e7475d34a21
+    git: https://github.com/jragonfyre/constrained-categories.git
+    commit: 7b2636f2c9cf53a4771e277e48e41e7475d34a21
+  extra-dep: true
+#extra-dep: true
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps: 

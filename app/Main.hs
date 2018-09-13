@@ -9,7 +9,7 @@ import Plot
 import Polynomial
 import MathClasses
 import Vector
-import qualified Data.Vector.Sized as V
+--import qualified Data.Vector.Sized as V
 import qualified Data.Maybe as M
 import Graphics.Text.TrueType (loadFontFile)
 import qualified Graphics.Image as I
@@ -425,15 +425,21 @@ main = do
         ]
   -}
   let 
-    mat1 = generateMat @2 @2 (\i j -> flip V.index (linearIndex i j) . M.fromJust $ V.fromList @4 [1::Double,2,3,4])
+    mat1 = generateMat @2 @2 (\i j -> flip indexVec (linearIndex i j) . M.fromJust $ fromListVec @4 [1,2,3,4])
     mat2 = ((1,2),(3,4))^.from matAsComponents
-    vec1 = M.fromJust $ V.fromList @2 [1::Double,2]
+    mat3 = CM22 mat2
+    vec1 = M.fromJust $ fromListVec @2 [1,2]
     vec2 = makeVector 1 2
+    vec3 = CV2 vec2
   defaultMain
     [ bgroup
         "Linear-alg-testing"
         [ bench "fixed, Vectors" . nf ((mat2*.)::Vector -> Vector) $ vec2
-        , bench "variable, V.Vector 2" . nf ((mat1*.)::V.Vector 2 Double -> V.Vector 2 Double) $ vec1
+        , bench "variable, GVector 2" . nf ((mat1*.)::GVector 2 -> GVector 2) $ vec1
+        , bench "mixed, CVector 2" . nf ((mat3*.)::CVector 2 -> CVector 2) $ vec3
+        , bench "fixed, Matrix" . nf ((mat2*.)::Matrix -> Matrix) $ mat2
+        , bench "variable, GMatrix 2 2" . nf ((mat1*.)::GMatrix 2 2 -> GMatrix 2 2) $ mat1
+        , bench "mixed, CMatrix 2 2" . nf ((mat3*.)::CMatrix 2 2 -> CMatrix 2 2) $ mat3
         ]
     ]
   {-

@@ -124,6 +124,9 @@ instance Multiplicable Matrix Double Matrix where
   (*.) mat x = mat & each %~ (x *.)
 instance Multiplicable Matrix Vector Vector where 
   (*.) mat vec = (vec^.x) *. (mat^.x) +. (vec^.y) *. (mat^.y)
+-- this is bad. TODO
+instance Multiplicable Vector Matrix Vector where
+  (*.) vec mat = (transpose mat) *. vec
 instance Multiplicable Covector Matrix Covector where
   (*.) covec mat = covec & over (from dualize) ((transpose mat)*.)
 instance Multiplicable Matrix Point Point where 

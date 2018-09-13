@@ -51,6 +51,7 @@ dependencies:
 - ghc-typelits-knownnat # to derive knownnat constraints
 - finite-typelits # to get finite domain integers
 - vector-sized >= 1.0.4.0
+#- ghc-prim
 
 default-extensions:
 - LambdaCase
@@ -94,6 +95,8 @@ default-extensions:
 - TypeFamilyDependencies
 - PostfixOperators
 - TypeApplications
+- MagicHash
+- UnboxedTuples
 #- OverloadedLists
 
 library:
