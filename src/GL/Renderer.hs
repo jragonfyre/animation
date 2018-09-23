@@ -149,7 +149,7 @@ draw nVerts bbox (Program prog vao baseUniform vpMat colorUni tIn) win t = do
 data Program = Program GL.Program GL.VertexArrayObject GL.UniformLocation GL.UniformLocation GL.UniformLocation GL.UniformLocation
 
 shaderPath :: FilePath
-shaderPath = "shaders" </> "demo"
+shaderPath = ".." </> "shaders" </> "demo"
 
 fontPath = ".." </> "fonts"
 
