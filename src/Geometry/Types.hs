@@ -369,6 +369,15 @@ boxBottom px = px^.corner.y
 boxTop :: Box -> Double 
 boxTop px = px^.corner.y + px^.dimensions.y
 
+boxHeight :: Box -> Double
+boxHeight bx = bx^.dimensions.y
+
+boxWidth :: Box -> Double
+boxWidth bx = bx^.dimensions.x
+
+boxLength :: Box -> Double
+boxLength = boxWidth
+
 class GBounded a where
   bounds :: a -> Box
 

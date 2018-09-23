@@ -51,7 +51,14 @@ dependencies:
 - ghc-typelits-knownnat # to derive knownnat constraints
 - finite-typelits # to get finite domain integers
 - vector-sized >= 1.0.4.0
+- OpenGL >= 3.0.2.2
+- GLUtil
+- GLFW-b
+- bytestring
+- OpenGLRaw
+- clock
 #- ghc-prim
+
 
 default-extensions:
 - LambdaCase

@@ -21,6 +21,8 @@ import Criterion
 import Criterion.Main
 import Control.DeepSeq
 
+import GL.Renderer
+
 --import Geometry.Region.Types
 
 import Rasterizer
@@ -395,9 +397,12 @@ testT = 2
 
 main :: IO ()
 main = do
+  demoMain
+  {-
   putStrLn "Test"
   putStrLn $ show (tPoly $. testT)
   putStrLn "Test2"
+  -}
   {-
   let
     ppic 
@@ -424,6 +429,7 @@ main = do
             0.01
         ]
   -}
+  {-
   let 
     mat1 = generateMat @2 @2 (\i j -> flip indexVec (linearIndex i j) . M.fromJust $ fromListVec @4 [1,2,3,4])
     mat2 = ((1,2),(3,4))^.from matAsComponents
@@ -442,6 +448,7 @@ main = do
         , bench "mixed, CMatrix 2 2" . nf ((mat3*.)::CMatrix 2 2 -> CMatrix 2 2) $ mat3
         ]
     ]
+  -}
   {-
   defaultMain
     [ bgroup

@@ -135,6 +135,27 @@ restrictToR2 (st,ed) rbez =
       (composeQuadLin (ryCoeffs2 rbez) l)
       (composeQuadLin (rzCoeffs2 rbez) l)
 
+bez2ToRBez3 :: Bezier2 -> RBezier3
+bez2ToRBez3 bez = 
+  let 
+    (x2,x1,x0) = xCoeffs2 bez
+    (y2,y1,y0) = yCoeffs2 bez
+  in
+    rbezierFromCoeffs3 (0,x2,x1,x0) (0,y2,y1,y0) (0,0,0,1)
+
+bez3ToRBez3 :: Bezier3 -> RBezier3
+bez3ToRBez3 bez = rbezierFromCoeffs3 (xCoeffs3 bez) (yCoeffs3 bez) (0,0,0,1)
+
+rbez2ToRBez3 :: RBezier2 -> RBezier3 
+rbez2ToRBez3 bez =
+  let 
+    (x2,x1,x0) = rxCoeffs2 bez
+    (y2,y1,y0) = ryCoeffs2 bez
+    (w2,w1,w0) = rzCoeffs2 bez
+  in
+    rbezierFromCoeffs3 (0,x2,x1,x0) (0,y2,y1,y0) (0,w2,w1,w0)
+
+
 -- | Restricts (or even expands) a rational cubic Bezier to a particular interval of parameter values
 restrictToR3 :: (Double,Double) -- ^ @(intervalStart,intervalEnd)@
              -> RBezier3 
@@ -191,6 +212,12 @@ subdivideRBezier2 ks rbez = map (flip restrictToR2 rbez) $ zip ks (tail ks)
 --   represents the point in projective space with homogeneous coordinates @[xw:yw:w]@.
 type WPoint = (Point,Double)
 
+instance Translatable (Point,Double) where
+  translate vec (pt,wt) = (pt+.vec,wt)
+
+instance Scalable (Point,Double) where
+  scale s (pt, wt) = (s*.pt,wt)
+
 -- | Correctly transform weighted points by affine transformations. Equivalent to transforming the
 --   corresponding projective
 --   point by the corresponding projective transformation.
@@ -229,6 +256,20 @@ instance Geometric Bezier2 where
       (transform aff c)
       (transform aff e)
 
+instance Translatable Bezier2 where
+  translate vec Bezier2{start2=s,control2=c,end2=e} =
+    makeBezier2
+      (s+.vec)
+      (c+.vec)
+      (e+.vec)
+instance Scalable Bezier2 where
+  scale r Bezier2{start2=s,control2=c,end2=e} =
+    makeBezier2
+      (r*.s)
+      (r*.c)
+      (r*.e)
+
+
 instance GBounded RBezier2 where
   bounds = rboundingBox2
 
@@ -238,6 +279,19 @@ instance Geometric RBezier2 where
       (transform aff s,sw)
       (transform aff c,cw)
       (transform aff e,ew)
+
+instance Translatable RBezier2 where
+  translate vec RBezier2{rstart2=s,rcontrol2=c,rend2=e} =
+    makeRBezier2
+      (translate vec s)
+      (translate vec c)
+      (translate vec e)
+instance Scalable RBezier2 where
+  scale r RBezier2{rstart2=s,rcontrol2=c,rend2=e} =
+    makeRBezier2
+      (scale r s)
+      (scale r c)
+      (scale r e)
 
 parametrization2 :: Bezier2 -> Double -> Point
 parametrization2 bez t =
@@ -408,6 +462,21 @@ instance Geometric Bezier3 where
       (transform aff d)
       (transform aff e)
 
+instance Translatable Bezier3 where
+  translate vec Bezier3{start3=s,stCont3=c,endCont3=d,end3=e} =
+    makeBezier3
+      (s+.vec)
+      (c+.vec)
+      (d+.vec)
+      (e+.vec)
+instance Scalable Bezier3 where
+  scale r Bezier3{start3=s,stCont3=c,endCont3=d,end3=e} =
+    makeBezier3
+      (r*.s)
+      (r*.c)
+      (r*.d)
+      (r*.e)
+
 parametrization3 :: Bezier3 -> Double -> Point
 parametrization3 bez t =
   let
@@ -456,6 +525,21 @@ instance Geometric RBezier3 where
       (transform aff cp,cz)
       (transform aff dp,dz)
       (transform aff ep,ez)
+
+instance Translatable RBezier3 where
+  translate vec RBezier3{rstart3=(sp,sz),rstCont3=(cp,cz),rendCont3=(dp,dz),rend3=(ep,ez)} =
+    makeRBezier3
+      (translate vec sp,sz)
+      (translate vec cp,cz)
+      (translate vec dp,dz)
+      (translate vec ep,ez)
+instance Scalable RBezier3 where
+  scale r RBezier3{rstart3=(sp,sz),rstCont3=(cp,cz),rendCont3=(dp,dz),rend3=(ep,ez)} =
+    makeRBezier3
+      (scale r sp,sz)
+      (scale r cp,cz)
+      (scale r dp,dz)
+      (scale r ep,ez)
 
 rparametrization3 :: RBezier3 -> Double -> Point
 rparametrization3 rbez t =

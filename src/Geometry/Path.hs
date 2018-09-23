@@ -72,6 +72,21 @@ instance Geometric PathSegment where
     in
       PathEArc ns nmat fA nfS tol
 
+instance Translatable PathSegment where
+  translate vec (PathSeg pt) = PathSeg (vec+.pt)
+  translate vec (PathBez2 s c) = PathBez2 (s+.vec) (c+.vec)
+  translate vec (PathBez3 s c d) = PathBez3 (s+.vec) (c+.vec) (d+.vec)
+  translate vec (PathRBez2 s c) = PathRBez2 (translate vec s) (translate vec c)
+  translate vec (PathRBez3 s c d) = PathRBez3 (translate vec s) (translate vec c) (translate vec d)
+  translate vec (PathEArc s mat fA fS tol) = PathEArc (s+.vec) mat fA fS tol
+instance Scalable PathSegment where
+  scale r (PathSeg pt) = PathSeg (r*.pt)
+  scale r (PathBez2 s c) = PathBez2 (r*.s) (r*.c)
+  scale r (PathBez3 s c d) = PathBez3 (r*.s) (r*.c) (r*.d)
+  scale r (PathRBez2 s c) = PathRBez2 (scale r s) (scale r c)
+  scale r (PathRBez3 s c d) = PathRBez3 (scale r s) (scale r c) (scale r d)
+  scale r (PathEArc s mat fA fS tol) = PathEArc (r*.s) (r*.mat) fA (if r > 0 then fS else not fS) tol
+
 pSegStart :: PathSegment -> Point
 pSegStart (PathSeg s) = s
 pSegStart (PathBez2 s _) = s
@@ -514,6 +529,11 @@ instance GBounded Contour where
 
 instance Geometric Contour where
   transform aff Contour{contourSegs = ps} = Contour $ fmap (transform aff) ps
+
+instance Translatable Contour where
+  translate vec Contour{contourSegs = ps} = Contour $ fmap (translate vec) ps
+instance Scalable Contour where
+  scale s Contour{contourSegs = ps} = Contour $ fmap (scale s) ps
  
 instance (Functor f, Geometric a) => Geometric (f a) where
   transform aff = fmap (transform aff)
@@ -531,6 +551,12 @@ instance GBounded Path where
 
 instance Geometric Path where
   transform aff Path{pathSegs = (ps,cap)} = Path (fmap (transform aff) ps, transform aff cap)
+
+instance Translatable Path where
+  translate vec Path{pathSegs = (ps,cap)} = Path (fmap (translate vec) ps, translate vec cap)
+
+instance Scalable Path where
+  scale s Path{pathSegs = (ps,cap)} = Path (fmap (scale s) ps, scale s cap)
 
 makePath :: [PathSegment] -> Point -> Path
 makePath ps cap = Path (V.fromList ps, cap)

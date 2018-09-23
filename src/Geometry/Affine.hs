@@ -24,6 +24,22 @@ import Utils
 
 class Geometric a where
   transform :: Affine -> a -> a
+class Translatable a where
+  translate :: Vector -> a -> a
+  default translate :: (Geometric a) => Vector -> a -> a
+  translate = transform . translationAff
+class Scalable a where 
+  scale :: Double -> a -> a -- scale about origin
+  default scale :: (Geometric a) => Double -> a -> a
+  scale = transform . scaleAff
+
+scaleAbout :: (Translatable a, Scalable a) => Point -> Double -> a -> a
+scaleAbout pt s =
+  let
+    v = pt-.origin
+  in
+    translate ((1-s)*.v) . scale s
+
 
 -- objects determined by points
 class Pointed a where
@@ -146,6 +162,14 @@ instance Multiplicable Matrix Affine Affine where
       (m1,trans) = aff^.affAsPair
     in
       makeAffine (mat*.m1) (mat*.trans)
+instance Multiplicable Affine Affine Affine where
+  (*.) aff1 aff2 =
+    let
+      (m1,t1) = aff1^.affAsPair
+      (m2,t2) = aff2^.affAsPair
+    in
+      makeAffine (m1*.m2) (m1*.t2+.t1)
+
 instance Multiplicable Affine Vector Vector where 
   (*.) aff vec = (aff^.linear) *. vec
 instance Multiplicable Affine Point Point where 
@@ -191,11 +215,19 @@ instance Differentiable Matrix where
 
 instance Geometric Vector where
   transform = (*.)
+instance Translatable Vector where
+  translate _ = id
+instance Scalable Vector where
+  scale = (*.)
 
 instance Pointed Point where
   pointsOf inj pt = inj pt
 instance Geometric Point where
   transform = (*.)
+instance Translatable Point where
+  translate = (+.)
+instance Scalable Point where
+  scale = (*.)
 
 -- should satisfy something like
 --
@@ -215,9 +247,13 @@ instance Geometric HalfPlane where
       trad = r + (tnorm `dot` trans)
     in
       makeHalfPlane tnorm trad
+instance Translatable HalfPlane where
+instance Scalable HalfPlane where
 
 instance Geometric ConvexPolytope where
   transform aff cp = cp & hplanes %~ (transform aff)
+instance Translatable ConvexPolytope where
+instance Scalable ConvexPolytope where
 
 line :: Point -> Point -> Double -> Point
 line p1 p2 t = p1 +. t*.(p2-.p1)
@@ -451,6 +487,44 @@ intersectionBoxes boxes =
       ly
       my
 
+boxCenter :: Box -> Point
+boxCenter box = box^.corner +. (0.5::Double)*.(box^.dimensions)
+
+scaleBoxAboutCenter :: Double -> Double -> Box -> Box
+scaleBoxAboutCenter sx sy box = 
+  let
+    cent = boxCenter box
+    dims = (0.5::Double) *. (box^.dimensions)
+  in
+    makeBoxCenter cent (sx*(dims^.x)) (sy*(dims^.y))
+
+transformBoxToBox :: Box -> Box -> Affine
+transformBoxToBox boxFrom boxTo = 
+  let
+    lfrom = boxLength boxFrom
+    lto = boxLength boxTo
+    hfrom = boxHeight boxFrom
+    hto = boxHeight boxTo
+    hscale = hto/hfrom
+    lscale = lto/lfrom
+    froml = boxLeft boxFrom
+    tol = boxLeft boxTo
+    fromt = boxTop boxFrom
+    tot = boxTop boxTo
+  in
+    makeAffine (diagonal lscale hscale) (makeVector (tol - (lscale*froml)) (tot - (hscale*fromt)))
+
+-- | smallest concentric box of aspect ratio ar containing the given box
+--   aspectRatio is width/height
+smallestCCBoxOfAR :: Box -> Double -> Box
+smallestCCBoxOfAR box ar = 
+  let
+    (bw,bh) = box^.dimensions.vecAsPair
+  in
+    unionBoxes [ scaleBoxAboutCenter (bh*ar/bw) 1 box
+               , scaleBoxAboutCenter 1 (bw/(ar*bh)) box
+               ]
+
 boxXInterval :: Box -> (Double,Double)
 boxXInterval box = (boxLeft box, boxRight box)
 
@@ -468,9 +542,17 @@ instance GBounded Segment where
 
 instance GBounded Box where
   bounds = id
+instance Translatable Box where
+  translate vec = corner %~ (+. vec)
+instance Scalable Box where
+  scale s = (corner %~ (scale s)) . (dimensions %~ (scale s))
 
 instance Geometric Segment where
   transform aff seg = seg & each %~ (transform aff)
+instance Translatable Segment where
+  translate vec = each %~ (+. vec)
+instance Scalable Segment where 
+  scale s = each %~ (s*.)
 
 withinY :: Box -> Double -> Bool
 withinY bx y = (boxBottom bx) <= y && y <= (boxTop bx)
@@ -489,17 +571,20 @@ rotate theta =
 diagonal :: Double -> Double -> Matrix
 diagonal a d = ((a,0),(0,d))^.from matAsComponents
 
-scale :: Double -> Matrix
-scale s = diagonal s s
+scaleMat :: Double -> Matrix
+scaleMat s = diagonal s s
+
+scaleAff :: Double -> Affine
+scaleAff = matrixToAffine . scaleMat
 
 matrixToAffine :: Matrix -> Affine
 matrixToAffine mat = makeAffine mat zero
 
-translate :: Vector -> Affine
-translate = makeAffine unit
+translationAff :: Vector -> Affine
+translationAff = makeAffine unit
 
 translateToOrigin :: Point -> Affine
-translateToOrigin = translate . (origin -.)
+translateToOrigin = translationAff . (origin -.)
 
 trace :: Matrix -> Double
 trace mat = 
@@ -582,7 +667,7 @@ matrixKernelTolerance tol mat =
 matrixEigenvectors :: Matrix -> [(Double,Vector)]
 matrixEigenvectors mat = 
   let
-    f ev = case matrixKernel (mat -. (scale ev)) of 
+    f ev = case matrixKernel (mat -. (scaleMat ev)) of 
       ZeroSubSp -> 
         []
       WholeSubSp ->
@@ -595,7 +680,7 @@ matrixEigenvectors mat =
 matrixEigenvectorsTolerance :: Double -> Matrix -> [(Double,Vector)]
 matrixEigenvectorsTolerance tol mat = 
   let
-    f ev = case matrixKernelTolerance tol (mat -. (scale ev)) of 
+    f ev = case matrixKernelTolerance tol (mat -. (scaleMat ev)) of 
       ZeroSubSp -> 
         []
       WholeSubSp ->
